@@ -20,6 +20,9 @@ const SYSCALL_YIELD: usize = 124;
 const SYSCALL_GET_TIME: usize = 169;
 /// taskinfo syscall
 const SYSCALL_TASK_INFO: usize = 410;
+use crate::config::*;
+/// syscall statistic bucket
+pub static mut SYSCALL_COUNTS: [u32; MAX_SYSCALL_NUM] = [0; MAX_SYSCALL_NUM];
 
 mod fs;
 mod process;
@@ -28,6 +31,13 @@ use fs::*;
 use process::*;
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+    // get mut ref of global array
+    unsafe {
+        // update bucket in terms of syscall_id
+        if syscall_id < MAX_SYSCALL_NUM {
+            SYSCALL_COUNTS[syscall_id] += 1;
+        }
+    }
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
@@ -36,4 +46,9 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_TASK_INFO => sys_task_info(args[0] as *mut TaskInfo),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
+}
+
+/// shabi 
+pub fn get_syscall_counts() -> &'static [u32; MAX_SYSCALL_NUM] {
+    unsafe { &SYSCALL_COUNTS }
 }

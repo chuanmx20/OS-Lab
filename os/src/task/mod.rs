@@ -135,6 +135,11 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    fn get_current_task_status(&self) -> TaskStatus {
+        let inner= self.inner.exclusive_access();
+        inner.tasks[inner.current_task].task_status
+    }
 }
 
 /// Run the first task in task list.
@@ -168,4 +173,9 @@ pub fn suspend_current_and_run_next() {
 pub fn exit_current_and_run_next() {
     mark_current_exited();
     run_next_task();
+}
+
+/// Return the id of current running task
+pub fn get_current_task_status() -> TaskStatus {
+    TASK_MANAGER.get_current_task_status()
 }
