@@ -60,5 +60,5 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
             time: get_time_ms(),
         }
     }
-    -1
+    0
 }
