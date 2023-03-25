@@ -54,7 +54,7 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
-            syscall_count: [0;MAX_SYSCALL_NUM],
+            syscall_cnt: [0;MAX_SYSCALL_NUM]
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -136,22 +136,17 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
-
-    fn get_current_task_status(&self) -> TaskStatus {
-        let inner= self.inner.exclusive_access();
-        inner.tasks[inner.current_task].task_status
-    }
-
-    fn update_current_task_syscall_count(&self, syscall_id: usize) -> usize {
+    /// Update syscall count of current task
+    fn update_syscall_cnt(&self, id:&usize) {
         let mut inner = self.inner.exclusive_access();
-        let task_ind = inner.current_task;
-        inner.tasks[task_ind].update_syscall_count(syscall_id);
-        syscall_id
+        let  current = inner.current_task;
+        inner.tasks[current].update_cnt(id);
     }
 
-    fn get_current_task_syscall_count(&self) -> [u32;MAX_SYSCALL_NUM] {
+    /// Get syscall count of current task
+    fn get_syscall_cnt(&self) -> [u32;MAX_SYSCALL_NUM] {
         let inner = self.inner.exclusive_access();
-        inner.tasks[inner.current_task].get_syscall_count()
+        inner.tasks[inner.current_task].get_cnt()
     }
 }
 
@@ -188,18 +183,12 @@ pub fn exit_current_and_run_next() {
     run_next_task();
 }
 
-/// Return the id of current running task
-pub fn get_current_task_status() -> TaskStatus {
-    TASK_MANAGER.get_current_task_status()
+/// Update syscall cnt of current task
+pub fn update_current_cnt(id:&usize) {
+    TASK_MANAGER.update_syscall_cnt(id);
 }
 
-/// Update the syscall count of current task
-pub fn update_current_syscall_count(syscall_id: usize) -> usize {
-    TASK_MANAGER.update_current_task_syscall_count(syscall_id);
-    syscall_id
-}
-
-/// Get the syscall count of current task
-pub fn get_current_syscall_count() -> [u32;MAX_SYSCALL_NUM] {
-    TASK_MANAGER.get_current_task_syscall_count()
+/// Get syscall cnt of current task
+pub fn get_current_cnt() -> [u32;MAX_SYSCALL_NUM] {
+    TASK_MANAGER.get_syscall_cnt()
 }

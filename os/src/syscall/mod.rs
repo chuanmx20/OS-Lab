@@ -27,13 +27,11 @@ mod process;
 use fs::*;
 use process::*;
 
-use crate::config::MAX_SYSCALL_NUM;
+use crate::{config::MAX_SYSCALL_NUM, task::update_current_cnt};
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
-    // get mut ref of global array
-        // update bucket in terms of syscall_id
     if syscall_id < MAX_SYSCALL_NUM {
-        update_syscall_count(syscall_id);
+        update_current_cnt(&syscall_id);
     }
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
