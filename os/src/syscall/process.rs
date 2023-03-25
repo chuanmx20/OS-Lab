@@ -2,7 +2,7 @@
 use crate::{
     config::MAX_SYSCALL_NUM,
     task::{exit_current_and_run_next, suspend_current_and_run_next, get_current_task_status, get_current_syscall_count, TaskStatus, update_current_syscall_count},
-    timer::get_time_ms,
+    timer::{get_time_ms,get_time_us},
 };
 
 
@@ -41,7 +41,7 @@ pub fn sys_yield() -> isize {
 /// get time with second and microsecond
 pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    let us = get_time_ms();
+    let us = get_time_us();
     unsafe {
         *ts = TimeVal {
             sec: us / 1_000_000,
