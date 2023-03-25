@@ -14,12 +14,13 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
+use crate::config::{MAX_APP_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
-use crate::timer::get_time_ms;
+use alloc::collections::BTreeMap;
 use lazy_static::*;
 use switch::__switch;
+use alloc::vec::Vec;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
@@ -43,7 +44,7 @@ pub struct TaskManager {
 /// Inner of Task Manager
 pub struct TaskManagerInner {
     /// task list
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     /// id of current `Running` task
     current_task: usize,
 }
@@ -52,12 +53,10 @@ lazy_static! {
     /// Global variable: TASK_MANAGER
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-            syscall_cnt: [0;MAX_SYSCALL_NUM],
-            birth: get_time_ms()
-        }; MAX_APP_NUM];
+        let mut tasks:Vec<TaskControlBlock> = Vec::new();
+        for _ in 0..MAX_APP_NUM {
+            tasks.push(TaskControlBlock::new())
+        }
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
             task.task_status = TaskStatus::Ready;
@@ -146,9 +145,10 @@ impl TaskManager {
     }
 
     /// Get syscall count of current task
-    fn get_syscall_cnt(&self) -> [u32;MAX_SYSCALL_NUM] {
+    fn get_syscall_cnt(&self) -> BTreeMap<usize, u32> {
         let inner = self.inner.exclusive_access();
-        inner.tasks[inner.current_task].get_cnt()
+        let current = inner.current_task;
+        inner.tasks[current].get_cnt().clone()
     }
 
     /// Get birth time of task
@@ -203,7 +203,7 @@ pub fn update_current_cnt(id:&usize) {
 }
 
 /// Get syscall cnt of current task
-pub fn get_current_cnt() -> [u32;MAX_SYSCALL_NUM] {
+pub fn get_current_cnt() -> BTreeMap<usize, u32> {
     TASK_MANAGER.get_syscall_cnt()
 }
 

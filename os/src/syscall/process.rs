@@ -53,10 +53,15 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info");
+    let current_cnt = get_current_cnt();
+    let mut syscall_cnt:[u32;MAX_SYSCALL_NUM] = [0;MAX_SYSCALL_NUM];
+    for (k, v) in current_cnt {
+        syscall_cnt[k] = v;
+    }
     unsafe {
         *_ti = TaskInfo {
             status: get_current_status(),
-            syscall_times: get_current_cnt(),
+            syscall_times: syscall_cnt,
             time: get_time_ms() - get_current_birth(),
         }
     }
