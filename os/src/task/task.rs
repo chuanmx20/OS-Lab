@@ -10,8 +10,10 @@ pub struct TaskControlBlock {
     pub task_status: TaskStatus,
     /// The task context
     pub task_cx: TaskContext,
-    /// syscall count
-    pub syscall_cnt: [u32;MAX_SYSCALL_NUM]
+    /// Syscall count
+    pub syscall_cnt: [u32;MAX_SYSCALL_NUM],
+    /// Start time in ms
+    pub birth: usize
 }
 
 impl TaskControlBlock {
@@ -22,6 +24,10 @@ impl TaskControlBlock {
     /// Get syscall cnt
     pub fn get_cnt(&self) -> [u32;MAX_SYSCALL_NUM]{
         self.syscall_cnt
+    }
+    /// Get birth timestamp
+    pub fn get_birth(&self) -> usize {
+        self.birth
     }
 }
 

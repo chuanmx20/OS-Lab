@@ -17,6 +17,7 @@ mod task;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
+use crate::timer::get_time_ms;
 use lazy_static::*;
 use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
@@ -54,7 +55,8 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
-            syscall_cnt: [0;MAX_SYSCALL_NUM]
+            syscall_cnt: [0;MAX_SYSCALL_NUM],
+            birth: get_time_ms()
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -148,6 +150,18 @@ impl TaskManager {
         let inner = self.inner.exclusive_access();
         inner.tasks[inner.current_task].get_cnt()
     }
+
+    /// Get birth time of task
+    fn get_birth(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].get_birth()
+    }
+
+    /// Get state of current task
+    fn get_status(&self) -> TaskStatus {
+        let inner = self.inner.exclusive_access();
+        inner.tasks[inner.current_task].task_status
+    }
 }
 
 /// Run the first task in task list.
@@ -191,4 +205,14 @@ pub fn update_current_cnt(id:&usize) {
 /// Get syscall cnt of current task
 pub fn get_current_cnt() -> [u32;MAX_SYSCALL_NUM] {
     TASK_MANAGER.get_syscall_cnt()
+}
+
+/// Get birth time of curren task
+pub fn get_current_birth() -> usize {
+    TASK_MANAGER.get_birth()
+}
+
+/// Get status of current task
+pub fn get_current_status() -> TaskStatus {
+    TASK_MANAGER.get_status()
 }
