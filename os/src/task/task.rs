@@ -1,4 +1,6 @@
 //! Types related to task management
+use alloc::collections::BTreeMap;
+
 use super::TaskContext;
 use crate::config::TRAP_CONTEXT_BASE;
 use crate::mm::{
@@ -28,6 +30,12 @@ pub struct TaskControlBlock {
 
     /// Program break
     pub program_brk: usize,
+
+    /// Time of creation
+    pub create_time: usize,
+
+    /// Counter of syscall
+    pub syscall_cnt: BTreeMap<usize, u32>,
 }
 
 impl TaskControlBlock {
@@ -63,6 +71,8 @@ impl TaskControlBlock {
             base_size: user_sp,
             heap_bottom: user_sp,
             program_brk: user_sp,
+            create_time: 0,
+            syscall_cnt: BTreeMap::new(),
         };
         // prepare TrapContext in user space
         let trap_cx = task_control_block.get_trap_cx();
@@ -95,6 +105,22 @@ impl TaskControlBlock {
         } else {
             None
         }
+    }
+
+    /// update syscall counter
+    pub fn syscall(&mut self, syscall_id: &usize) {
+        let entry = self.syscall_cnt.entry(*syscall_id).or_insert(0);
+        *entry += 1;
+    }
+
+    /// get syscall count
+    pub fn get_syscall_cnt(&self) -> &BTreeMap<usize,u32> {
+        &self.syscall_cnt
+    }
+    
+    /// get create time of current task
+    pub fn get_create_time(&self) -> usize {
+        self.create_time
     }
 }
 

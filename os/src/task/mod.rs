@@ -14,9 +14,11 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
+use crate::config::MAX_SYSCALL_NUM;
 use crate::loader::{get_app_data, get_num_app};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
+use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use lazy_static::*;
 use switch::__switch;
@@ -153,6 +155,26 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+
+    /// Update syscall count of current task.
+    fn update_syscall_cnt(&self, syscall_id: &usize) {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].syscall(syscall_id);
+    }
+
+    /// Get the current task's create time.
+    fn current_task_create_time(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].create_time
+    }
+    /// Get the current task's syscall time.
+    fn current_task_syscall_time(&self) -> BTreeMap<usize, u32> {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].get_syscall_cnt().clone()
+    }
 }
 
 /// Run the first task in task list.
@@ -201,4 +223,22 @@ pub fn current_trap_cx() -> &'static mut TrapContext {
 /// Change the current 'Running' task's program break
 pub fn change_program_brk(size: i32) -> Option<usize> {
     TASK_MANAGER.change_current_program_brk(size)
+}
+
+/// Update syscall count of current task.
+pub fn update_syscall(syscall_id: &usize) {
+    if *syscall_id >= MAX_SYSCALL_NUM {
+        panic!("syscall_id {} is out of range", syscall_id);
+    }
+    TASK_MANAGER.update_syscall_cnt(syscall_id);
+}
+
+/// Get the current task's create time.
+pub fn current_task_create_time() -> usize {
+    TASK_MANAGER.current_task_create_time()
+}
+
+/// Get the current task's syscall time.
+pub fn current_task_syscall_time() -> BTreeMap<usize, u32> {
+    TASK_MANAGER.current_task_syscall_time()
 }

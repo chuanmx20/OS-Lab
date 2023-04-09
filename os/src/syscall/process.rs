@@ -2,8 +2,8 @@
 use crate::{
     config::MAX_SYSCALL_NUM,
     task::{
-        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus,
-    },
+        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time,
+    }, timer::get_time_us,
 };
 
 #[repr(C)]
@@ -43,7 +43,12 @@ pub fn sys_yield() -> isize {
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
 pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    -1
+    let curr_time_us = get_time_us();
+    unsafe {
+        (*_ts).sec = curr_time_us / 1000000;
+        (*_ts).usec = curr_time_us % 1000000;
+    };
+    0
 }
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
@@ -51,7 +56,22 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
 /// HINT: What if [`TaskInfo`] is splitted by two pages ?
 pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info NOT IMPLEMENTED YET!");
-    -1
+    let curr_time_us = get_time_us();
+    let curr_task_create_time = current_task_create_time();
+    let syscall_cnt = current_task_syscall_time();
+    let intercal = (curr_time_us - curr_task_create_time) / 1000;
+    let mut syscall_times = [0; MAX_SYSCALL_NUM];
+    for (key, value) in syscall_cnt {
+        syscall_times[key] = value;
+    }
+    unsafe {
+        *_ti = TaskInfo {
+            status: TaskStatus::Running,
+            syscall_times,
+            time: intercal,
+        };
+    }
+    0
 }
 
 // YOUR JOB: Implement mmap.
