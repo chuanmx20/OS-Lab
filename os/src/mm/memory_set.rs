@@ -300,7 +300,7 @@ impl MemorySet {
         // } 
         let vpn_start = _start / PAGE_SIZE;
         let vpn_end = (_start + _len) / PAGE_SIZE;
-        for vpn in vpn_start..=vpn_end {
+        for vpn in vpn_start..vpn_end {
             if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
                 return -1;
             }

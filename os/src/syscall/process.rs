@@ -1,6 +1,6 @@
 //! Process management syscalls
 use crate::{
-    config::{MAX_SYSCALL_NUM, PAGE_SIZE, MEMORY_END},
+    config::{MAX_SYSCALL_NUM, PAGE_SIZE},
     task::{
         change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, current_task_pa, mmap, munmap,
     }, timer::get_time_us, mm::VirtAddr,
@@ -117,9 +117,6 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
     if _port & 0x7 != 0 {
         return -1;
     }
-    if _len == 0 || _start + _len > MEMORY_END {
-        return -1;
-    }
     let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
     mmap(_start, _len, _port)
 }
@@ -129,9 +126,6 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
 pub fn sys_munmap(_start: usize, _len: usize) -> isize {
     trace!("kernel: sys_munmap NOT IMPLEMENTED YET!");
     if _start % PAGE_SIZE != 0 {
-        return -1;
-    }
-    if _len == 0 || _start + _len > MEMORY_END {
         return -1;
     }
     let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
