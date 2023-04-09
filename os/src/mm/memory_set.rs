@@ -284,9 +284,9 @@ impl MemorySet {
     pub fn mmap(&mut self, _start: usize, _len: usize, _port: usize) -> isize {
         let size = _len / PAGE_SIZE + 1;
         // check if memory is enough
-        if !enough_frames(size) {
-            return -1;
-        }
+        // if !enough_frames(size) {
+        //     return -1;
+        // }
         
         let va_start = VirtAddr::from(_start);
         let va_end = VirtAddr::from(_start + _len);
