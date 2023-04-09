@@ -83,12 +83,19 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
     for (key, value) in syscall_cnt {
         syscall_times[key] = value;
     }
-    unsafe {
-        *_ti = TaskInfo {
-            status: TaskStatus::Running,
-            syscall_times,
-            time: intercal,
-        };
+    let pa = current_task_pa(VirtAddr::from(_ti as usize));
+    match pa {
+        Some(pa) => {
+            let ti = usize::from(pa) as *mut TaskInfo;
+            unsafe {
+                (*ti).status = TaskStatus::Running;
+                (*ti).syscall_times = syscall_times;
+                (*ti).time = intercal;
+            };
+        },
+        _ => {
+            return -1;
+        }
     }
     0
 }
