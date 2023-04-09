@@ -16,6 +16,7 @@ mod task;
 
 use crate::config::MAX_SYSCALL_NUM;
 use crate::loader::{get_app_data, get_num_app};
+use crate::mm::{VirtAddr, PhysAddr};
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::collections::BTreeMap;
@@ -175,6 +176,13 @@ impl TaskManager {
         let current = inner.current_task;
         inner.tasks[current].get_syscall_cnt().clone()
     }
+
+    /// Get phyAddr from current task's page table of virtual address.
+    fn get_pa(&self, va: VirtAddr) -> Option<PhysAddr> {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].get_pa(va)
+    }
 }
 
 /// Run the first task in task list.
@@ -241,4 +249,9 @@ pub fn current_task_create_time() -> usize {
 /// Get the current task's syscall time.
 pub fn current_task_syscall_time() -> BTreeMap<usize, u32> {
     TASK_MANAGER.current_task_syscall_time()
+}
+
+/// Get the phyAddr of current task from a virtAddr
+pub fn current_task_pa(va: VirtAddr) -> Option<PhysAddr> {
+    TASK_MANAGER.get_pa(va)
 }

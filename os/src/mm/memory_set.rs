@@ -262,6 +262,20 @@ impl MemorySet {
             false
         }
     }
+
+    /// Get phyAddr of virtAddr
+    pub fn get_pa(&self, va: VirtAddr) -> Option<PhysAddr> {
+        let vpn = va.floor();
+        let offset = va.page_offset();
+        if let Some(pte) = self.translate(vpn) {
+            if pte.is_valid() {
+                let ppn = pte.ppn();
+                let pa = usize::from(PhysAddr::from(ppn));
+                return Some(PhysAddr::from(pa + offset));
+            }
+        }
+        None
+    }
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {

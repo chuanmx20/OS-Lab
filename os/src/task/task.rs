@@ -4,7 +4,7 @@ use alloc::collections::BTreeMap;
 use super::TaskContext;
 use crate::config::TRAP_CONTEXT_BASE;
 use crate::mm::{
-    kernel_stack_position, MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE,
+    kernel_stack_position, MapPermission, MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE, PhysAddr,
 };
 use crate::trap::{trap_handler, TrapContext};
 
@@ -121,6 +121,11 @@ impl TaskControlBlock {
     /// get create time of current task
     pub fn get_create_time(&self) -> usize {
         self.create_time
+    }
+
+    /// Get phyAddr of a virtAddr
+    pub fn get_pa(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.memory_set.get_pa(va)
     }
 }
 

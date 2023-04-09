@@ -2,8 +2,8 @@
 use crate::{
     config::MAX_SYSCALL_NUM,
     task::{
-        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time,
-    }, timer::get_time_us,
+        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, current_task_pa,
+    }, timer::get_time_us, mm::VirtAddr,
 };
 
 #[repr(C)]
@@ -43,11 +43,30 @@ pub fn sys_yield() -> isize {
 /// HINT: What if [`TimeVal`] is splitted by two pages ?
 pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     trace!("kernel: sys_get_time");
-    let curr_time_us = get_time_us();
-    unsafe {
-        (*_ts).sec = curr_time_us / 1000000;
-        (*_ts).usec = curr_time_us % 1000000;
-    };
+    // let curr_time_us = get_time_us();
+    // unsafe {
+    //     (*_ts).sec = curr_time_us / 1000000;
+    //     (*_ts).usec = curr_time_us % 1000000;
+    // };
+
+    // Current mode : kernel
+    // _ts is VirtAddr from user mode
+    // to get correct task start time, we nned to convert it to PhysAddr and then
+    // access is to get the value
+    let pa = current_task_pa(VirtAddr::from(_ts as usize));
+    match pa {
+        Some(pa) => {
+            let ts = usize::from(pa) as *mut TimeVal;
+            let curr_time_us = get_time_us();
+            unsafe {
+                (*ts).sec = curr_time_us / 1000000;
+                (*ts).usec = curr_time_us % 1000000;
+            };
+        },
+        _ => {
+            return -1;
+        }
+    }
     0
 }
 
