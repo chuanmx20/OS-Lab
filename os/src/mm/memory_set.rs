@@ -326,13 +326,13 @@ impl MemorySet {
     /// Implementation of munmap
     /// [start, start + len) 中存在未被映射的虚存。
     pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
+        for vpn in _start/4096..(_start+_len)/4096 {
+            if let None = self.page_table.translate(VirtPageNum::from(vpn)) {
+                return -1;
+            }
+        }
         for area in self.areas.iter_mut() {
             if area.vpn_range.get_start() == VirtPageNum::from(_start) && area.vpn_range.get_end() == VirtPageNum(_start + _len) {
-                for vpn in area.vpn_range {
-                    if let None = self.page_table.translate(vpn) {
-                        return -1;
-                    }
-                }
                 area.unmap(&mut self.page_table);
             }
         }
