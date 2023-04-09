@@ -295,17 +295,18 @@ impl MemorySet {
             area.vpn_range.get_start() < va_end.ceil()
                 && area.vpn_range.get_end() > va_start.floor()
         }) {
+            // already mapped
             return -1;
         } 
 
         let mut perm = MapPermission::U;
-        if _port & 1 != 0 {
+        if _port & 0x1 != 0 {
             perm |= MapPermission::R;
         }
-        if _port & 2 != 0 {
+        if _port & 0x2 != 0 {
             perm |= MapPermission::W;
         }
-        if _port & 4 != 0 {
+        if _port & 0x4 != 0 {
             perm |= MapPermission::X;
         }
         
