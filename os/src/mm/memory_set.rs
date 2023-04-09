@@ -291,13 +291,20 @@ impl MemorySet {
         let va_start = VirtAddr::from(_start);
         let va_end = VirtAddr::from(_start + _len);
 
-        if let Some(_) = self.areas.iter().find(|area| {
-            area.vpn_range.get_start() < va_end.ceil()
-                && area.vpn_range.get_end() > va_start.floor()
-        }) {
-            // already mapped
-            return -1;
-        } 
+        // if let Some(_) = self.areas.iter().find(|area| {
+        //     area.vpn_range.get_start() < va_end.ceil()
+        //         && area.vpn_range.get_end() > va_start.floor()
+        // }) {
+        //     // already mapped
+        //     return -1;
+        // } 
+        let vpn_start = _start / PAGE_SIZE;
+        let vpn_end = (_start + _len) / PAGE_SIZE;
+        for vpn in vpn_start..=vpn_end {
+            if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
+                return -1;
+            }
+        }
 
         let mut perm = MapPermission::U;
         if _port & 0x1 != 0 {
