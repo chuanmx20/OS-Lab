@@ -108,19 +108,16 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
 // 物理内存不足
 pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
     trace!("kernel: sys_mmap NOT IMPLEMENTED YET!");
-    let va_start = VirtAddr::from(_start);
-    if va_start.page_offset() != 0 {
+    if _start % PAGE_SIZE != 0 {
         return -1;
     }
     if _port & !0x7 != 0 {
-        // port is not zero
         return -1;
     }
     if _port & 0x7 != 0 {
-        // port is all zero
         return -1;
     }
-    if _len == 0 {
+    if _len == 0 || _start + _len > MEMORY_END {
         return -1;
     }
     mmap(_start, _len, _port)
@@ -130,11 +127,10 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
 // [start, start + len) 中存在未被映射的虚存。
 pub fn sys_munmap(_start: usize, _len: usize) -> isize {
     trace!("kernel: sys_munmap NOT IMPLEMENTED YET!");
-    let va_start = VirtAddr::from(_start);
-    if va_start.page_offset() != 0 {
+    if _start % PAGE_SIZE != 0 {
         return -1;
     }
-    if _len == 0 {
+    if _len == 0 || _start + _len > MEMORY_END {
         return -1;
     }
     munmap(_start, _len)
