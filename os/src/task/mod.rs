@@ -183,6 +183,20 @@ impl TaskManager {
         let current = inner.current_task;
         inner.tasks[current].get_pa(va)
     }
+
+    /// Inner call of mmap
+    fn mmap(&self, _start: usize, _len: usize, _port: usize) -> isize {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].mmap(_start, _len, _port)
+    }
+
+    /// Inner call of munmap
+    fn munmap(&self, _start: usize, _len: usize) -> isize {
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].munmap(_start, _len)
+    }
 }
 
 /// Run the first task in task list.
@@ -254,4 +268,13 @@ pub fn current_task_syscall_time() -> BTreeMap<usize, u32> {
 /// Get the phyAddr of current task from a virtAddr
 pub fn current_task_pa(va: VirtAddr) -> Option<PhysAddr> {
     TASK_MANAGER.get_pa(va)
+}
+
+/// Interface of mmap
+pub fn mmap(_start: usize, _len: usize, _port: usize) -> isize {
+    TASK_MANAGER.mmap(_start, _len, _port)
+}
+/// Interface of munmap
+pub fn munmap(_start: usize, _len: usize) -> isize {
+    TASK_MANAGER.munmap(_start, _len)
 }

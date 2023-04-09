@@ -127,6 +127,16 @@ impl TaskControlBlock {
     pub fn get_pa(&self, va: VirtAddr) -> Option<PhysAddr> {
         self.memory_set.get_pa(va)
     }
+
+    /// mmap implementation
+    pub fn mmap(&mut self, _start: usize, _len: usize, _post: usize) -> isize {
+        self.memory_set.mmap(_start, _len, _post)
+    }
+
+    /// munmap implementation
+    pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
+        self.memory_set.munmap(_start, _len)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq)]

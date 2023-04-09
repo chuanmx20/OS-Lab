@@ -86,6 +86,13 @@ impl FrameAllocator for StackFrameAllocator {
     }
 }
 
+impl StackFrameAllocator {
+    /// check if there are `n` frames left
+    fn enough(&self, n: usize) -> bool {
+        self.current + n <= self.end
+    }
+}
+
 type FrameAllocatorImpl = StackFrameAllocator;
 
 lazy_static! {
@@ -134,4 +141,9 @@ pub fn frame_allocator_test() {
     }
     drop(v);
     println!("frame_allocator_test passed!");
+}
+
+/// interface to check if there are `n` frames left
+pub fn enough_frames(n: usize) -> bool {
+    FRAME_ALLOCATOR.exclusive_access().enough(n)
 }

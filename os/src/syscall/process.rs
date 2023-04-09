@@ -1,8 +1,8 @@
 //! Process management syscalls
 use crate::{
-    config::MAX_SYSCALL_NUM,
+    config::{MAX_SYSCALL_NUM, PAGE_SIZE, MEMORY_END},
     task::{
-        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, current_task_pa,
+        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, current_task_pa, mmap, munmap,
     }, timer::get_time_us, mm::VirtAddr,
 };
 
@@ -94,15 +94,39 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
 }
 
 // YOUR JOB: Implement mmap.
+// start 没有按页大小对齐
+// port & !0x7 != 0 (port 其余位必须为0)
+// port & 0x7 = 0 (这样的内存无意义)
+// [start, start + len) 中存在已经被映射的页
+// 物理内存不足
 pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
     trace!("kernel: sys_mmap NOT IMPLEMENTED YET!");
-    -1
+    if _start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    if _port & !0x7 != 0 {
+        return -1;
+    }
+    if _port & 0x7 != 0 {
+        return -1;
+    }
+    if _len == 0 || _start + _len > MEMORY_END {
+        return -1;
+    }
+    mmap(_start, _len, _port)
 }
 
 // YOUR JOB: Implement munmap.
+// [start, start + len) 中存在未被映射的虚存。
 pub fn sys_munmap(_start: usize, _len: usize) -> isize {
     trace!("kernel: sys_munmap NOT IMPLEMENTED YET!");
-    -1
+    if _start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    if _len == 0 || _start + _len > MEMORY_END {
+        return -1;
+    }
+    munmap(_start, _len)
 }
 /// change data segment size
 pub fn sys_sbrk(size: i32) -> isize {

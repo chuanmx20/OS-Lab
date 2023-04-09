@@ -1,5 +1,6 @@
 //! Implementation of [`MapArea`] and [`MemorySet`].
 
+use super::frame_allocator::enough_frames;
 use super::{frame_alloc, FrameTracker};
 use super::{PTEFlags, PageTable, PageTableEntry};
 use super::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
@@ -275,6 +276,60 @@ impl MemorySet {
             }
         }
         None
+    }
+
+    /// Implementation of mmap
+    // [start, start + len) 中存在已经被映射的页
+    // 物理内存不足
+    pub fn mmap(&mut self, _start: usize, _len: usize, _port: usize) -> isize {
+        let size = _len / PAGE_SIZE + 1;
+        // check if memory is enough
+        if !enough_frames(size) {
+            return -1;
+        }
+        
+        let va_start = VirtAddr::from(_start);
+        let va_end = VirtAddr::from(_start + _len);
+
+        if let Some(_) = self.areas.iter().find(|area| {
+            area.vpn_range.get_start() < va_end.ceil()
+                && area.vpn_range.get_end() > va_start.floor()
+        }) {
+            return -1;
+        } 
+
+        let mut perm = MapPermission::U;
+        if _port & 1 != 0 {
+            perm |= MapPermission::R;
+        }
+        if _port & 2 != 0 {
+            perm |= MapPermission::W;
+        }
+        if _port & 4 != 0 {
+            perm |= MapPermission::X;
+        }
+        
+        self.insert_framed_area(va_start, va_end, perm);
+        0
+    }
+
+    /// Implementation of munmap
+    /// [start, start + len) 中存在未被映射的虚存。
+    pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
+        for area in self.areas.iter_mut() {
+            if area.vpn_range.get_start() <= _start.into() && area.vpn_range.get_end() >= (_start + _len).into() {
+                for vpn in area.vpn_range {
+                    if let Some(pte) = self.page_table.translate(vpn) {
+                        if !pte.is_valid() {
+                            // page to unmap is not mapped!
+                            return -1;
+                        }
+                    }
+                    area.unmap(&mut self.page_table);
+                }
+            }
+        }
+        0
     }
 }
 /// map area structure, controls a contiguous piece of virtual memory
