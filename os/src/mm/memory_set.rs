@@ -287,7 +287,7 @@ impl MemorySet {
         // if !enough_frames(size) {
         //     return -1;
         // }
-        
+        debug!("mmap: start: {}, len: {}", _start, _len);
         let va_start = VirtAddr::from(_start);
         let va_end = VirtAddr::from(_start + _len);
 
@@ -299,10 +299,12 @@ impl MemorySet {
         //     return -1;
         // } 
         let vpn_start = _start / PAGE_SIZE;
+        debug!("vpn_start: {}", vpn_start);
         let vpn_end = (_start + _len) / PAGE_SIZE;
+        debug!("vpn_end: {}", vpn_end);
         for vpn in vpn_start..vpn_end {
             if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
-                return -1;
+                return -1 as isize;
             }
         }
 
@@ -325,13 +327,13 @@ impl MemorySet {
     /// [start, start + len) 中存在未被映射的虚存。
     pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
         for area in self.areas.iter_mut() {
-            if area.vpn_range.get_start() == _start.into() && area.vpn_range.get_end() == (_start + _len).into() {
+            if area.vpn_range.get_start() == VirtPageNum::from(_start) && area.vpn_range.get_end() == VirtPageNum(_start + _len) {
                 for vpn in area.vpn_range {
                     if let None = self.page_table.translate(vpn) {
                         return -1;
                     }
-                    area.unmap(&mut self.page_table);
                 }
+                area.unmap(&mut self.page_table);
             }
         }
         0
