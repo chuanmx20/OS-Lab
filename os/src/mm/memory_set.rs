@@ -1,6 +1,6 @@
 //! Implementation of [`MapArea`] and [`MemorySet`].
 
-use super::frame_allocator::enough_frames;
+// use super::frame_allocator::enough_frames;
 use super::{frame_alloc, FrameTracker};
 use super::{PTEFlags, PageTable, PageTableEntry};
 use super::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
@@ -282,11 +282,11 @@ impl MemorySet {
     // [start, start + len) 中存在已经被映射的页
     // 物理内存不足
     pub fn mmap(&mut self, _start: usize, _len: usize, _port: usize) -> isize {
-        let size = _len / PAGE_SIZE + 1;
+        // let size = _len / PAGE_SIZE + 1;
         // check if memory is enough
-        if !enough_frames(size) {
-            return -1;
-        }
+        // if !enough_frames(size) {
+        //     return -1;
+        // }
         
         let va_start = VirtAddr::from(_start);
         let va_end = VirtAddr::from(_start + _len);

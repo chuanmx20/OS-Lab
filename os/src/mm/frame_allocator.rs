@@ -85,7 +85,7 @@ impl FrameAllocator for StackFrameAllocator {
         self.recycled.push(ppn);
     }
 }
-
+#[allow(unused)]
 impl StackFrameAllocator {
     /// check if there are `n` frames left
     fn enough(&self, n: usize) -> bool {
@@ -144,6 +144,7 @@ pub fn frame_allocator_test() {
 }
 
 /// interface to check if there are `n` frames left
+#[allow(unused)]
 pub fn enough_frames(n: usize) -> bool {
     FRAME_ALLOCATOR.exclusive_access().enough(n)
 }
