@@ -120,6 +120,7 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
     if _len == 0 || _start + _len > MEMORY_END {
         return -1;
     }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
     mmap(_start, _len, _port)
 }
 
@@ -133,6 +134,7 @@ pub fn sys_munmap(_start: usize, _len: usize) -> isize {
     if _len == 0 || _start + _len > MEMORY_END {
         return -1;
     }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
     munmap(_start, _len)
 }
 /// change data segment size
