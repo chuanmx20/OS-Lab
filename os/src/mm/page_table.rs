@@ -1,12 +1,11 @@
 //! Implementation of [`PageTableEntry`] and [`PageTable`].
 
-use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum};
+use super::{frame_alloc, FrameTracker, PhysPageNum, StepByOne, VirtAddr, VirtPageNum, PhysAddr};
 use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
 
 bitflags! {
-    /// page table entry flags
     pub struct PTEFlags: u8 {
         const V = 1 << 0;
         const R = 1 << 1;
@@ -147,6 +146,15 @@ impl PageTable {
     pub fn token(&self) -> usize {
         8usize << 60 | self.root_ppn.0
     }
+
+    /// get translated va
+    pub fn va2pa(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.find_pte(VirtPageNum::from(va)).map(|pte| {
+            let pa_start = PhysAddr::from(pte.ppn());
+            let ofs = va.page_offset();
+            PhysAddr::from(usize::from(pa_start) + ofs)
+        })
+    }
 }
 
 /// Translate&Copy a ptr[u8] array with LENGTH len to a mutable u8 Vec through page table
@@ -170,4 +178,11 @@ pub fn translated_byte_buffer(token: usize, ptr: *const u8, len: usize) -> Vec<&
         start = end_va.into();
     }
     v
+}
+
+/// Translate a ptr[u8]
+pub fn va2pa<T>(token: usize, ptr: *mut T) -> &'static mut T {
+    let page_table = PageTable::from_token(token);
+    let start_va = VirtAddr::from(ptr as usize);
+    page_table.va2pa(start_va).unwrap().get_mut()
 }

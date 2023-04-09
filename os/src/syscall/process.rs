@@ -2,8 +2,9 @@
 use crate::{
     config::{MAX_SYSCALL_NUM, PAGE_SIZE, MEMORY_END},
     task::{
-        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, current_task_pa, mmap, munmap,
-    }, timer::get_time_us, mm::VirtAddr,
+        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, current_task_create_time, current_task_syscall_time, mmap, munmap, current_user_token,
+    }, timer::get_time_us, 
+    mm::va2pa,
 };
 
 #[repr(C)]
@@ -53,20 +54,11 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
     // _ts is VirtAddr from user mode
     // to get correct task start time, we nned to convert it to PhysAddr and then
     // access is to get the value
-    let pa = current_task_pa(VirtAddr::from(_ts as usize));
-    match pa {
-        Some(pa) => {
-            let ts = usize::from(pa) as *mut TimeVal;
-            let curr_time_us = get_time_us();
-            unsafe {
-                (*ts).sec = curr_time_us / 1000000;
-                (*ts).usec = curr_time_us % 1000000;
-            };
-        },
-        _ => {
-            return -1;
-        }
-    }
+    let curr_time_us = get_time_us();
+    *va2pa(current_user_token(), _ts) = TimeVal {
+        sec: curr_time_us / 1000000,
+        usec: curr_time_us % 1000000,
+    };
     0
 }
 
@@ -83,20 +75,11 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
     for (key, value) in syscall_cnt {
         syscall_times[key] = value;
     }
-    let pa = current_task_pa(VirtAddr::from(_ti as usize));
-    match pa {
-        Some(pa) => {
-            let ti = usize::from(pa) as *mut TaskInfo;
-            unsafe {
-                (*ti).status = TaskStatus::Running;
-                (*ti).syscall_times = syscall_times;
-                (*ti).time = intercal;
-            };
-        },
-        _ => {
-            return -1;
-        }
-    }
+    *va2pa(current_user_token(), _ti) = TaskInfo {
+        status: TaskStatus::Running,
+        syscall_times,
+        time: intercal,
+    };
     0
 }
 

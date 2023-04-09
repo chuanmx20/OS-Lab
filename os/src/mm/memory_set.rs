@@ -266,7 +266,7 @@ impl MemorySet {
 
     /// Get phyAddr of virtAddr
     pub fn get_pa(&self, va: VirtAddr) -> Option<PhysAddr> {
-        let vpn = va.floor();
+        let vpn = VirtPageNum::from(va);
         let offset = va.page_offset();
         if let Some(pte) = self.translate(vpn) {
             if pte.is_valid() {
