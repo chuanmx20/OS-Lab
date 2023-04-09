@@ -325,13 +325,10 @@ impl MemorySet {
     /// [start, start + len) 中存在未被映射的虚存。
     pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
         for area in self.areas.iter_mut() {
-            if area.vpn_range.get_start() <= _start.into() && area.vpn_range.get_end() >= (_start + _len).into() {
+            if area.vpn_range.get_start() == _start.into() && area.vpn_range.get_end() == (_start + _len).into() {
                 for vpn in area.vpn_range {
-                    if let Some(pte) = self.page_table.translate(vpn) {
-                        if !pte.is_valid() {
-                            // page to unmap is not mapped!
-                            return -1;
-                        }
+                    if let None = self.page_table.translate(vpn) {
+                        return -1;
                     }
                     area.unmap(&mut self.page_table);
                 }
