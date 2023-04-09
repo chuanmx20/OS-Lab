@@ -114,7 +114,7 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
     if _port & !0x7 != 0 {
         return -1;
     }
-    if _port & 0x7 != 0 {
+    if _port & 0x7 == 0 {
         return -1;
     }
     let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
