@@ -7,6 +7,7 @@
 use super::__switch;
 use super::{fetch_task, TaskStatus};
 use super::{TaskContext, TaskControlBlock};
+use crate::config::MAX_SYSCALL_NUM;
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
@@ -115,5 +116,15 @@ pub fn record_syscall(syscall_id: usize) {
     let processor = PROCESSOR.exclusive_access();
     if let Some(task) = processor.current() {
         task.record_syscall(syscall_id);
+    }
+}
+
+/// Get syscall record
+pub fn get_syscall_record() -> [u32; MAX_SYSCALL_NUM] {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.get_current_syscall_record()
+    } else {
+        [0; MAX_SYSCALL_NUM]
     }
 }

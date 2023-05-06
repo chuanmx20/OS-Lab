@@ -1,7 +1,7 @@
 //! Types related to task management & Functions for completely changing TCB
 use super::TaskContext;
 use super::{kstack_alloc, pid_alloc, KernelStack, PidHandle};
-use crate::config::TRAP_CONTEXT_BASE;
+use crate::config::{TRAP_CONTEXT_BASE, MAX_SYSCALL_NUM};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
 use crate::timer::{get_time_ms, get_time_us};
@@ -254,6 +254,16 @@ impl TaskControlBlock {
         let mut inner = self.inner_exclusive_access();
         let count = inner.syscall_time.entry(syscall_id).or_insert(0);
         *count += 1;
+    }
+
+    /// get syscall time
+    pub fn get_current_syscall_record(&self) -> [u32; MAX_SYSCALL_NUM] {
+        let inner = self.inner_exclusive_access();
+        let mut result = [0; MAX_SYSCALL_NUM];
+        for (syscall_id, count) in inner.syscall_time.iter() {
+            result[*syscall_id] = *count as u32;
+        }
+        result
     }
 }
 

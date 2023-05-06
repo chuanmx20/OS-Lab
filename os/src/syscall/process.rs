@@ -7,7 +7,7 @@ use crate::{
     mm::{translated_refmut, translated_str},
     task::{
         add_task, current_task, current_user_token, exit_current_and_run_next,
-        suspend_current_and_run_next, TaskStatus,
+        suspend_current_and_run_next, TaskStatus, get_syscall_record,
     }, timer::get_time_us,
 };
 
@@ -139,7 +139,15 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
         "kernel:pid[{}] sys_task_info NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let us = get_time_us();
+    let mut _pa = translated_refmut(current_user_token(), _ti);
+    let syscall_record = get_syscall_record();
+    *_pa = TaskInfo {
+        status: TaskStatus::Running,
+        syscall_times: syscall_record,
+        time: us,
+    };
+    0
 }
 
 /// YOUR JOB: Implement mmap.
@@ -148,7 +156,7 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         "kernel:pid[{}] sys_mmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1`
+    -1
 }
 
 /// YOUR JOB: Implement munmap.
