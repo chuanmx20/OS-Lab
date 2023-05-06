@@ -8,7 +8,7 @@ use crate::{
     task::{
         add_task, current_task, current_user_token, exit_current_and_run_next,
         suspend_current_and_run_next, TaskStatus,
-    },
+    }, timer::get_time_us,
 };
 
 #[repr(C)]
@@ -122,7 +122,13 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
         "kernel:pid[{}] sys_get_time NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let mut _pa = translated_refmut(current_user_token(), _ts);
+    let us = get_time_us();
+    *_pa = TimeVal {
+        sec: us / 1000000,
+        usec: us % 1000000,
+    };
+    0
 }
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
@@ -142,7 +148,7 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         "kernel:pid[{}] sys_mmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    -1`
 }
 
 /// YOUR JOB: Implement munmap.
