@@ -109,3 +109,11 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
 }
+
+/// Record syscall
+pub fn record_syscall(syscall_id: usize) {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.record_syscall(syscall_id);
+    }
+}
