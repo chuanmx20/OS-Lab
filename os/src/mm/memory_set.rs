@@ -300,6 +300,70 @@ impl MemorySet {
             false
         }
     }
+
+    /// mmap
+    pub fn mmap(&mut self, _start: usize, _len: usize, _port: usize) -> isize {
+        // let size = _len / PAGE_SIZE + 1;
+        // check if memory is enough
+        // if !enough_frames(size) {
+        //     return -1;
+        // }
+        debug!("mmap: start: {}, len: {}", _start, _len);
+        let va_start = VirtAddr::from(_start);
+        let va_end = VirtAddr::from(_start + _len);
+
+        // if let Some(_) = self.areas.iter().find(|area| {
+        //     area.vpn_range.get_start() < va_end.ceil()
+        //         && area.vpn_range.get_end() > va_start.floor()
+        // }) {
+        //     // already mapped
+        //     return -1;
+        // } 
+        let vpn_start = _start / PAGE_SIZE;
+        debug!("vpn_start: {}", vpn_start);
+        let vpn_end = (_start + _len) / PAGE_SIZE;
+        debug!("vpn_end: {}", vpn_end);
+        for vpn in vpn_start..vpn_end {
+            if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
+                return -1 as isize;
+            }
+        }
+
+        let mut perm = MapPermission::U;
+        if _port & 0x1 != 0 {
+            perm |= MapPermission::R;
+        }
+        if _port & 0x2 != 0 {
+            perm |= MapPermission::W;
+        }
+        if _port & 0x4 != 0 {
+            perm |= MapPermission::X;
+        }
+        
+        self.insert_framed_area(va_start, va_end, perm);
+        0
+    }
+    
+    /// Implementation of munmap
+    /// [start, start + len) 中存在未被映射的虚存。
+    pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
+        for vpn in _start/PAGE_SIZE..(_start+_len)/PAGE_SIZE {
+            if let None = self.page_table.translate(VirtPageNum::from(vpn)) {
+                return -1;
+            }
+        }
+        debug!("munmap: start: {}, len: {}", _start/PAGE_SIZE, _len);
+        for area in self.areas.iter_mut() {
+            debug!("munmap: area vpn_start: {:?}, vpn_end: {:?}", area.vpn_range.get_start(), area.vpn_range.get_end());
+            let start = VirtPageNum::from(_start/PAGE_SIZE);
+            let end = VirtPageNum::from((_start + _len)/PAGE_SIZE);
+            debug!("start: {:?}, end: {:?}", start, end);
+            if area.vpn_range.get_start() <= start && area.vpn_range.get_end() >= end {
+                area.unmap(&mut self.page_table);
+            }
+        }
+        0
+    }
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {

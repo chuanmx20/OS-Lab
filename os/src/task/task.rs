@@ -265,6 +265,16 @@ impl TaskControlBlock {
         }
         result
     }
+
+    /// mmap
+    pub fn mmap(&self, _start: usize, _len: usize, _port: usize) -> isize {
+        self.inner_exclusive_access().memory_set.mmap(_start, _len, _port)
+    }
+
+    /// munmap
+    pub fn munmap(&self, _start: usize, _len: usize) -> isize {
+        self.inner_exclusive_access().memory_set.munmap(_start, _len)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq)]

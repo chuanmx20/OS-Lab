@@ -2,12 +2,12 @@
 use alloc::sync::Arc;
 
 use crate::{
-    config::MAX_SYSCALL_NUM,
+    config::{MAX_SYSCALL_NUM, PAGE_SIZE},
     loader::get_app_data_by_name,
     mm::{translated_refmut, translated_str},
     task::{
         add_task, current_task, current_user_token, exit_current_and_run_next,
-        suspend_current_and_run_next, TaskStatus, get_syscall_record,
+        suspend_current_and_run_next, TaskStatus, get_syscall_record, mmap, munmap,
     }, timer::get_time_us,
 };
 
@@ -156,7 +156,17 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         "kernel:pid[{}] sys_mmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    if _start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    if _port & !0x7 != 0 {
+        return -1;
+    }
+    if _port & 0x7 == 0 {
+        return -1;
+    }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
+    mmap(_start, _len, _port)
 }
 
 /// YOUR JOB: Implement munmap.
@@ -165,7 +175,11 @@ pub fn sys_munmap(_start: usize, _len: usize) -> isize {
         "kernel:pid[{}] sys_munmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    if _start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
+    munmap(_start, _len)
 }
 
 /// change data segment size

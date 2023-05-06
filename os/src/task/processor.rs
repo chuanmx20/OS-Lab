@@ -128,3 +128,23 @@ pub fn get_syscall_record() -> [u32; MAX_SYSCALL_NUM] {
         [0; MAX_SYSCALL_NUM]
     }
 }
+
+/// mmap
+pub fn mmap(_start: usize, _len: usize, _port: usize) -> isize {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.mmap(_start, _len, _port)
+    } else {
+        -1
+    }
+}
+
+/// munmap
+pub fn munmap(_start: usize, _len: usize) -> isize {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.munmap(_start, _len)
+    } else {
+        -1
+    }
+}
