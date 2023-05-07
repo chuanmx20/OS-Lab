@@ -76,6 +76,12 @@ pub struct TaskControlBlockInner {
 
     /// syscall time
     pub syscall_time: BTreeMap<usize, u32>,
+
+    /// stride
+    pub stride: usize,
+
+    /// priority
+    pub priority: usize,
 }
 
 impl TaskControlBlockInner {
@@ -128,6 +134,8 @@ impl TaskControlBlock {
                     program_brk: user_sp,
                     start_time: get_time_ms(),
                     syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
                 })
             },
         };
@@ -203,6 +211,8 @@ impl TaskControlBlock {
                     program_brk: parent_inner.program_brk,
                     start_time: get_time_us(),
                     syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
                 })
             },
         });
@@ -307,6 +317,8 @@ impl TaskControlBlock {
                     program_brk: user_sp,
                     start_time: get_time_us(),
                     syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
                 })
             },
         });
