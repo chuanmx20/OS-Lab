@@ -157,12 +157,15 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         current_task().unwrap().pid.0
     );
     if _start % PAGE_SIZE != 0 {
+        debug!("mmap: start not aligned");
         return -1;
     }
     if _port & !0x7 != 0 {
+        debug!("mmap: port is not zero");
         return -1;
     }
     if _port & 0x7 == 0 {
+        debug!("mmap: port is all zero");
         return -1;
     }
     let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;

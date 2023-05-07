@@ -323,9 +323,18 @@ impl MemorySet {
         debug!("vpn_start: {}", vpn_start);
         let vpn_end = (_start + _len) / PAGE_SIZE;
         debug!("vpn_end: {}", vpn_end);
-        for vpn in vpn_start..vpn_end {
-            if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
-                return -1 as isize;
+        // for vpn in vpn_start..vpn_end {
+        //     if let Some(_) = self.translate(VirtPageNum::from(vpn)) {
+        //         debug!("mmap: Space already mapped! {}", vpn);
+        //         return -1 as isize;
+        //     }
+        // }
+        for area in self.areas.iter() {
+            if area.vpn_range.get_start() < va_end.ceil()
+                && area.vpn_range.get_end() > va_start.floor()
+            {
+                debug!("mmap: Space already mapped! {}, {}", usize::from(area.vpn_range.get_start()), usize::from(area.vpn_range.get_end()));
+                return -1;
             }
         }
 
@@ -354,15 +363,21 @@ impl MemorySet {
         }
         let mut flag = false;
         debug!("munmap: start: {}, len: {}", _start/PAGE_SIZE, _len);
+
         for area in self.areas.iter_mut() {
             let start = VirtPageNum::from(_start/PAGE_SIZE);
             let end = VirtPageNum::from((_start + _len)/PAGE_SIZE);
             if area.vpn_range.get_start() <= start && area.vpn_range.get_end() >= end {
                 debug!("munmap: area vpn_start: {:?}, vpn_end: {:?}", area.vpn_range.get_start(), area.vpn_range.get_end());
                 area.unmap(&mut self.page_table);
+                area.dropped = true;
                 flag = true;
             }
         }
+        debug!("munmap: area count before drop : {}", self.areas.len());
+        self.areas.retain(|area| !area.dropped);
+        debug!("munmap: area count after drop : {}", self.areas.len());
+
         if flag {
             0
         } else {
@@ -376,6 +391,7 @@ pub struct MapArea {
     data_frames: BTreeMap<VirtPageNum, FrameTracker>,
     map_type: MapType,
     map_perm: MapPermission,
+    dropped: bool,
 }
 
 impl MapArea {
@@ -392,6 +408,7 @@ impl MapArea {
             data_frames: BTreeMap::new(),
             map_type,
             map_perm,
+            dropped: false,
         }
     }
     pub fn from_another(another: &Self) -> Self {
@@ -400,6 +417,7 @@ impl MapArea {
             data_frames: BTreeMap::new(),
             map_type: another.map_type,
             map_perm: another.map_perm,
+            dropped: false,
         }
     }
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
