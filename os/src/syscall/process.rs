@@ -179,6 +179,7 @@ pub fn sys_munmap(_start: usize, _len: usize) -> isize {
         return -1;
     }
     let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
+    debug!("munmap: start: {:#x}, len: {:#x}", _start, _len);
     munmap(_start, _len)
 }
 

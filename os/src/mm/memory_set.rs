@@ -343,7 +343,7 @@ impl MemorySet {
         self.insert_framed_area(va_start, va_end, perm);
         0
     }
-    
+
     /// Implementation of munmap
     /// [start, start + len) 中存在未被映射的虚存。
     pub fn munmap(&mut self, _start: usize, _len: usize) -> isize {
@@ -352,17 +352,22 @@ impl MemorySet {
                 return -1;
             }
         }
+        let mut flag = false;
         debug!("munmap: start: {}, len: {}", _start/PAGE_SIZE, _len);
         for area in self.areas.iter_mut() {
-            debug!("munmap: area vpn_start: {:?}, vpn_end: {:?}", area.vpn_range.get_start(), area.vpn_range.get_end());
             let start = VirtPageNum::from(_start/PAGE_SIZE);
             let end = VirtPageNum::from((_start + _len)/PAGE_SIZE);
-            debug!("start: {:?}, end: {:?}", start, end);
             if area.vpn_range.get_start() <= start && area.vpn_range.get_end() >= end {
+                debug!("munmap: area vpn_start: {:?}, vpn_end: {:?}", area.vpn_range.get_start(), area.vpn_range.get_end());
                 area.unmap(&mut self.page_table);
+                flag = true;
             }
         }
-        0
+        if flag {
+            0
+        } else {
+            -1
+        }
     }
 }
 /// map area structure, controls a contiguous piece of virtual memory
