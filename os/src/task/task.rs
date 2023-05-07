@@ -325,13 +325,15 @@ impl TaskControlBlock {
         // add child
         parent_inner.children.push(task_control_block.clone());
         // modify kernel_sp in trap_cx
-        // **** access child PCB exclusively
         let trap_cx = task_control_block.inner_exclusive_access().get_trap_cx();
         *trap_cx = TrapContext::app_init_context(entry_point, user_sp, KERNEL_SPACE.exclusive_access().token(), kernel_stack_top, trap_handler as usize);
         // return
         task_control_block
-        // **** release child PCB
-        // ---- release parent PCB
+    }
+
+    /// set prio
+    pub fn set_priority(&self, prio: usize) {
+        self.inner_exclusive_access().priority = prio;
     }
 }
 
