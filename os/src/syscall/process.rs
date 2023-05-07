@@ -228,5 +228,5 @@ pub fn sys_set_priority(_prio: isize) -> isize {
     }
     let task = current_task().unwrap();
     task.set_priority(_prio as usize);
-    0
+    _prio
 }
