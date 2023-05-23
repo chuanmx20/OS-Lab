@@ -3,13 +3,13 @@
 use alloc::sync::Arc;
 
 use crate::{
-    config::MAX_SYSCALL_NUM,
+    config::{MAX_SYSCALL_NUM, PAGE_SIZE},
     fs::{open_file, OpenFlags},
     mm::{translated_refmut, translated_str},
     task::{
         add_task, current_task, current_user_token, exit_current_and_run_next,
-        suspend_current_and_run_next, TaskStatus,
-    },
+        suspend_current_and_run_next, TaskStatus, get_syscall_record, mmap, munmap,
+    }, timer::get_time_us,
 };
 
 #[repr(C)]
@@ -122,7 +122,13 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
         "kernel:pid[{}] sys_get_time NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let mut _pa = translated_refmut(current_user_token(), _ts);
+    let us = get_time_us();
+    *_pa = TimeVal {
+        sec: us / 1000000,
+        usec: us % 1000000,
+    };
+    0
 }
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
@@ -133,7 +139,15 @@ pub fn sys_task_info(_ti: *mut TaskInfo) -> isize {
         "kernel:pid[{}] sys_task_info NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let us = get_time_us();
+    let mut _pa = translated_refmut(current_user_token(), _ti);
+    let syscall_record = get_syscall_record();
+    *_pa = TaskInfo {
+        status: TaskStatus::Running,
+        syscall_times: syscall_record,
+        time: us,
+    };
+    0
 }
 
 /// YOUR JOB: Implement mmap.
@@ -142,7 +156,20 @@ pub fn sys_mmap(_start: usize, _len: usize, _port: usize) -> isize {
         "kernel:pid[{}] sys_mmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    if _start % PAGE_SIZE != 0 {
+        debug!("mmap: start not aligned");
+        return -1;
+    }
+    if _port & !0x7 != 0 {
+        debug!("mmap: port is not zero");
+        return -1;
+    }
+    if _port & 0x7 == 0 {
+        debug!("mmap: port is all zero");
+        return -1;
+    }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
+    mmap(_start, _len, _port)
 }
 
 /// YOUR JOB: Implement munmap.
@@ -151,7 +178,12 @@ pub fn sys_munmap(_start: usize, _len: usize) -> isize {
         "kernel:pid[{}] sys_munmap NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    if _start % PAGE_SIZE != 0 {
+        return -1;
+    }
+    let _len = ((_len + PAGE_SIZE - 1)/PAGE_SIZE) * PAGE_SIZE;
+    debug!("munmap: start: {:#x}, len: {:#x}", _start, _len);
+    munmap(_start, _len)
 }
 
 /// change data segment size
@@ -171,7 +203,19 @@ pub fn sys_spawn(_path: *const u8) -> isize {
         "kernel:pid[{}] sys_spawn NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let token = current_user_token();
+    let path = translated_str(token, _path);
+    if let Some(inode) = open_file(path.as_str(), OpenFlags::RDONLY) {
+        let data = inode.read_all();
+        let task = current_task().unwrap();
+        let new_task = task.spawn(data.as_slice());
+        let new_pid = new_task.pid.0;
+        // add new task to scheduler
+        add_task(new_task);
+        new_pid as isize
+    } else {
+        -1
+    }
 }
 
 // YOUR JOB: Set task priority.
@@ -180,5 +224,10 @@ pub fn sys_set_priority(_prio: isize) -> isize {
         "kernel:pid[{}] sys_set_priority NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    if _prio < 2 {
+        return -1;
+    }
+    let task = current_task().unwrap();
+    task.set_priority(_prio as usize);
+    _prio
 }

@@ -1,11 +1,13 @@
 //! Types related to task management & Functions for completely changing TCB
 use super::TaskContext;
 use super::{kstack_alloc, pid_alloc, KernelStack, PidHandle};
-use crate::config::TRAP_CONTEXT_BASE;
+use crate::config::{TRAP_CONTEXT_BASE, MAX_SYSCALL_NUM};
 use crate::fs::{File, Stdin, Stdout};
 use crate::mm::{MemorySet, PhysPageNum, VirtAddr, KERNEL_SPACE};
 use crate::sync::UPSafeCell;
+use crate::timer::{get_time_ms, get_time_us};
 use crate::trap::{trap_handler, TrapContext};
+use alloc::collections::BTreeMap;
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
 use alloc::vec::Vec;
@@ -71,6 +73,18 @@ pub struct TaskControlBlockInner {
 
     /// Program break
     pub program_brk: usize,
+
+    /// Start time
+    pub start_time: usize,
+
+    /// syscall time
+    pub syscall_time: BTreeMap<usize, u32>,
+
+    /// stride
+    pub stride: usize,
+
+    /// priority
+    pub priority: usize,
 }
 
 impl TaskControlBlockInner {
@@ -135,6 +149,10 @@ impl TaskControlBlock {
                     ],
                     heap_bottom: user_sp,
                     program_brk: user_sp,
+                    start_time: get_time_ms(),
+                    syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
                 })
             },
         };
@@ -216,6 +234,10 @@ impl TaskControlBlock {
                     fd_table: new_fd_table,
                     heap_bottom: parent_inner.heap_bottom,
                     program_brk: parent_inner.program_brk,
+                    start_time: get_time_us(),
+                    syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
                 })
             },
         });
@@ -260,6 +282,84 @@ impl TaskControlBlock {
         } else {
             None
         }
+    }
+
+    /// record syscall 
+    pub fn record_syscall(&self, syscall_id: usize) {
+        let mut inner = self.inner_exclusive_access();
+        let count = inner.syscall_time.entry(syscall_id).or_insert(0);
+        *count += 1;
+    }
+
+    /// get syscall time
+    pub fn get_current_syscall_record(&self) -> [u32; MAX_SYSCALL_NUM] {
+        let inner = self.inner_exclusive_access();
+        let mut result = [0; MAX_SYSCALL_NUM];
+        for (syscall_id, count) in inner.syscall_time.iter() {
+            result[*syscall_id] = *count as u32;
+        }
+        result
+    }
+
+    /// mmap
+    pub fn mmap(&self, _start: usize, _len: usize, _port: usize) -> isize {
+        self.inner_exclusive_access().memory_set.mmap(_start, _len, _port)
+    }
+
+    /// munmap
+    pub fn munmap(&self, _start: usize, _len: usize) -> isize {
+        self.inner_exclusive_access().memory_set.munmap(_start, _len)
+    }
+
+    /// spawn
+    pub fn spawn(self: &Arc<Self>, _app_data: &[u8]) -> Arc<Self> {
+        // ---- access parent PCB exclusively
+        let mut parent_inner = self.inner_exclusive_access();
+        // init user space(include trap context)
+        let (memory_set, user_sp, entry_point) = MemorySet::from_elf(_app_data);
+        let trap_cx_ppn = memory_set
+            .translate(VirtAddr::from(TRAP_CONTEXT_BASE).into())
+            .unwrap()
+            .ppn();
+        // alloc a pid and a kernel stack in kernel space
+        let pid_handle = pid_alloc();
+        let kernel_stack = kstack_alloc();
+        let kernel_stack_top = kernel_stack.get_top();
+        let task_control_block = Arc::new(TaskControlBlock {
+            pid: pid_handle,
+            kernel_stack,
+            inner: unsafe {
+                UPSafeCell::new(TaskControlBlockInner {
+                    trap_cx_ppn,
+                    base_size: parent_inner.base_size,
+                    task_cx: TaskContext::goto_trap_return(kernel_stack_top),
+                    task_status: TaskStatus::Ready,
+                    memory_set,
+                    parent: Some(Arc::downgrade(self)),
+                    children: Vec::new(),
+                    exit_code: 0,
+                    heap_bottom: user_sp,
+                    program_brk: user_sp,
+                    start_time: get_time_us(),
+                    syscall_time: BTreeMap::new(),
+                    stride: 0,
+                    priority: 16,
+                    fd_table: Vec::new(),
+                })
+            },
+        });
+        // add child
+        parent_inner.children.push(task_control_block.clone());
+        // modify kernel_sp in trap_cx
+        let trap_cx = task_control_block.inner_exclusive_access().get_trap_cx();
+        *trap_cx = TrapContext::app_init_context(entry_point, user_sp, KERNEL_SPACE.exclusive_access().token(), kernel_stack_top, trap_handler as usize);
+        // return
+        task_control_block
+    }
+
+    /// set prio
+    pub fn set_priority(&self, prio: usize) {
+        self.inner_exclusive_access().priority = prio;
     }
 }
 

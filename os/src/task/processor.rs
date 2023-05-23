@@ -7,6 +7,7 @@
 use super::__switch;
 use super::{fetch_task, TaskStatus};
 use super::{TaskContext, TaskControlBlock};
+use crate::config::MAX_SYSCALL_NUM;
 use crate::sync::UPSafeCell;
 use crate::trap::TrapContext;
 use alloc::sync::Arc;
@@ -60,6 +61,7 @@ pub fn run_tasks() {
             // access coming task TCB exclusively
             let mut task_inner = task.inner_exclusive_access();
             let next_task_cx_ptr = &task_inner.task_cx as *const TaskContext;
+            task_inner.stride += task_inner.priority;
             task_inner.task_status = TaskStatus::Running;
             // release coming task_inner manually
             drop(task_inner);
@@ -107,5 +109,43 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
     drop(processor);
     unsafe {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
+    }
+}
+
+/// Record syscall
+pub fn record_syscall(syscall_id: usize) {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.record_syscall(syscall_id);
+    }
+}
+
+/// Get syscall record
+pub fn get_syscall_record() -> [u32; MAX_SYSCALL_NUM] {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.get_current_syscall_record()
+    } else {
+        [0; MAX_SYSCALL_NUM]
+    }
+}
+
+/// mmap
+pub fn mmap(_start: usize, _len: usize, _port: usize) -> isize {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.mmap(_start, _len, _port)
+    } else {
+        -1
+    }
+}
+
+/// munmap
+pub fn munmap(_start: usize, _len: usize) -> isize {
+    let processor = PROCESSOR.exclusive_access();
+    if let Some(task) = processor.current() {
+        task.munmap(_start, _len)
+    } else {
+        -1
     }
 }
