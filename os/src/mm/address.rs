@@ -2,31 +2,22 @@
 use super::PageTableEntry;
 use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS};
 use core::fmt::{self, Debug, Formatter};
-
+/// physical address
 const PA_WIDTH_SV39: usize = 56;
 const VA_WIDTH_SV39: usize = 39;
 const PPN_WIDTH_SV39: usize = PA_WIDTH_SV39 - PAGE_SIZE_BITS;
 const VPN_WIDTH_SV39: usize = VA_WIDTH_SV39 - PAGE_SIZE_BITS;
 
-/// Definitions
-#[repr(C)]
+/// physical address
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct PhysAddr(pub usize);
-
-/// Virtual Address
-#[repr(C)]
+/// virtual address
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-///virtual address
 pub struct VirtAddr(pub usize);
-
-/// Physical Page Number PPN
-#[repr(C)]
+/// physical page number
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
-///phiscal page number
 pub struct PhysPageNum(pub usize);
-
-/// Virtual Page Number VPN
-#[repr(C)]
+/// virtual page number
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub struct VirtPageNum(pub usize);
 
@@ -178,10 +169,7 @@ impl VirtPageNum {
 }
 
 impl PhysAddr {
-    /// Get the immutable reference of physical address
-    pub fn get_ref<T>(&self) -> &'static T {
-        unsafe { (self.0 as *const T).as_ref().unwrap() }
-    }
+    ///Get mutable reference to `PhysAddr` value
     /// Get the mutable reference of physical address
     pub fn get_mut<T>(&self) -> &'static mut T {
         unsafe { (self.0 as *mut T).as_mut().unwrap() }
@@ -211,11 +199,6 @@ pub trait StepByOne {
     fn step(&mut self);
 }
 impl StepByOne for VirtPageNum {
-    fn step(&mut self) {
-        self.0 += 1;
-    }
-}
-impl StepByOne for PhysPageNum {
     fn step(&mut self) {
         self.0 += 1;
     }
