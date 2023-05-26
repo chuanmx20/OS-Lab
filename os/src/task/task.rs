@@ -344,7 +344,14 @@ impl TaskControlBlock {
                     syscall_time: BTreeMap::new(),
                     stride: 0,
                     priority: 16,
-                    fd_table: Vec::new(),
+                    fd_table: vec![
+                        // 0 -> stdin
+                        Some(Arc::new(Stdin)),
+                        // 1 -> stdout
+                        Some(Arc::new(Stdout)),
+                        // 2 -> stderr
+                        Some(Arc::new(Stdout)),
+                    ],
                 })
             },
         });
