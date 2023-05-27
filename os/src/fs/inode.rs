@@ -123,10 +123,10 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
         })
     }
 }
-
+/// Create a link to a file
 pub fn link(old_name: &str, new_name: &str) -> isize {
     ROOT_INODE.link(old_name, new_name)
-}
+}/// Unlink a name from a file
 pub fn unlink(name: &str) -> isize {
     ROOT_INODE.unlink(name)
 }
