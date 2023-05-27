@@ -155,4 +155,10 @@ impl File for OSInode {
         }
         total_write_size
     }
+    fn link(&self, old_name: &str, new_name: &str) -> isize {
+        ROOT_INODE.link(old_name, new_name)
+    }
+    fn unlink(&self, name: &str) -> isize {
+        ROOT_INODE.unlink(name)
+    }
 }
