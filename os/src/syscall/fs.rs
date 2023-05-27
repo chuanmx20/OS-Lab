@@ -96,9 +96,7 @@ pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
     let new_name = translated_str(token, _new_name);
     let inner = task.inner_exclusive_access();
     if let Some(inode) = inner.fd_table[0].as_ref() {
-        if inode.link(&old_name, &new_name) != -1 {
-            return 0;
-        }
+        return inode.link(&old_name, &new_name) 
     }
     -1
 }
@@ -109,5 +107,12 @@ pub fn sys_unlinkat(_name: *const u8) -> isize {
         "kernel:pid[{}] sys_unlinkat NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
+    let task = current_task().unwrap();
+    let token = current_user_token();
+    let name = translated_str(token, _name);
+    let inner = task.inner_exclusive_access();
+    if let Some(inode) = inner.fd_table[0].as_ref() {
+        return inode.unlink(&name) 
+    }
     -1
 }
