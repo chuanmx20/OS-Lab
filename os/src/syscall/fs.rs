@@ -1,6 +1,6 @@
 //! File and filesystem-related syscalls
-use crate::fs::{open_file, OpenFlags, Stat, link, unlink};
-use crate::mm::{translated_byte_buffer, translated_str, UserBuffer};
+use crate::fs::{open_file, OpenFlags, Stat, link, unlink, nlinks, inode_type};
+use crate::mm::{translated_byte_buffer, translated_str, UserBuffer, translated_refmut};
 use crate::task::{current_task, current_user_token};
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
@@ -81,7 +81,24 @@ pub fn sys_fstat(_fd: usize, _st: *mut Stat) -> isize {
         "kernel:pid[{}] sys_fstat NOT IMPLEMENTED",
         current_task().unwrap().pid.0
     );
-    -1
+    let token = current_user_token();
+    let st = translated_refmut(token, _st);
+    let task = current_task().unwrap();
+    let inner = task.inner_exclusive_access();
+    if _fd >= inner.fd_table.len() {
+        return -1;
+    }
+    if inner.fd_table[_fd].is_none() {
+        return -1;
+    }
+    // get pointer of fd_table[_fd]
+    let file = inner.fd_table[_fd].as_ref().unwrap();
+    let inode_id = file.inode_id();
+    st.ino = inode_id as u64;
+    st.nlink = nlinks(inode_id) as u32;
+    st.mode = inode_type(inode_id);
+    st.dev = 0;
+    0
 }
 
 /// YOUR JOB: Implement linkat.
@@ -93,6 +110,9 @@ pub fn sys_linkat(_old_name: *const u8, _new_name: *const u8) -> isize {
     let token = current_user_token();
     let old_name = translated_str(token, _old_name);
     let new_name = translated_str(token, _new_name);
+    if old_name.as_str() == new_name.as_str() {
+        return -1;
+    }
     link(&old_name.as_str(), &new_name.as_str())
 }
 

@@ -75,6 +75,17 @@ impl Inode {
             })
         })
     }
+    /// Find inode under current inode by inode_id
+    pub fn find_by_inode_id(&self, inode_id: u32) -> Option<Arc<Inode>> {
+        let fs = self.fs.lock();
+        let (block_id, block_offset) = fs.get_disk_inode_pos(inode_id);
+        Some(Arc::new(Self::new(
+            block_id,
+            block_offset,
+            self.fs.clone(),
+            self.block_device.clone(),
+        )))
+    }
     /// Increase the size of a disk inode
     fn increase_size(
         &self,
@@ -185,6 +196,31 @@ impl Inode {
         });
         block_cache_sync_all();
     }
+    /// get inode_id
+    pub fn inode_id(&self) -> u32 {
+        let fs = self.fs.lock();
+        fs.get_inode_id(self.block_id as u32, self.block_offset)
+    }
+    /// get nlinks
+    pub fn nlinks(&self, inode_id: usize) -> u32 {
+        let _fs = self.fs.lock();
+        self.read_disk_inode(|disk_inode| {
+            let file_count = (disk_inode.size as usize) / DIRENT_SZ;
+            let mut dirent = DirEntry::empty();
+            let mut ret = 0;
+            for i in 0..file_count {
+                assert_eq!(
+                    disk_inode.read_at(i * DIRENT_SZ, dirent.as_bytes_mut(), &self.block_device,),
+                    DIRENT_SZ,
+                );
+                if dirent.inode_id() == inode_id as u32 {
+                    ret += 1;
+                }
+            }
+            ret
+        })
+
+    }
     /// Link current inode to another name
     pub fn link(&self, old_name: &str, new_name: &str) -> isize {
         let mut fs = self.fs.lock();
@@ -289,5 +325,15 @@ impl Inode {
         self.modify_disk_inode(op);
         block_cache_sync_all();
         0
+    }
+    /// inode_type
+    pub fn inode_type(&self, inode_id: usize) -> usize {
+        let inode = self.find_by_inode_id(inode_id as u32).unwrap();
+        inode.read_disk_inode(|disk_inode| {
+            match disk_inode.is_dir() {
+                true => 0,
+                false => 1,
+            }
+        })
     }
 }
