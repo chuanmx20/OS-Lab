@@ -124,6 +124,13 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     }
 }
 
+pub fn link(old_name: &str, new_name: &str) -> isize {
+    ROOT_INODE.link(old_name, new_name)
+}
+pub fn unlink(name: &str) -> isize {
+    ROOT_INODE.unlink(name)
+}
+
 impl File for OSInode {
     fn readable(&self) -> bool {
         self.readable
@@ -154,11 +161,5 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
-    }
-    fn link(&self, old_name: &str, new_name: &str) -> isize {
-        ROOT_INODE.link(old_name, new_name)
-    }
-    fn unlink(&self, name: &str) -> isize {
-        ROOT_INODE.unlink(name)
     }
 }

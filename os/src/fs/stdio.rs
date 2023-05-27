@@ -39,12 +39,6 @@ impl File for Stdin {
     fn write(&self, _user_buf: UserBuffer) -> usize {
         panic!("Cannot write to stdin!");
     }
-    fn link(&self, _old_name: &str, _new_name: &str) -> isize {
-        panic!("Cannot link stdin!");
-    }
-    fn unlink(&self, _name: &str) -> isize {
-        panic!("Cannot unlink stdin!");
-    }
 }
 
 impl File for Stdout {
@@ -62,11 +56,5 @@ impl File for Stdout {
             print!("{}", core::str::from_utf8(*buffer).unwrap());
         }
         user_buf.len()
-    }
-    fn link(&self, _old_name: &str, _new_name: &str) -> isize {
-        panic!("Cannot link stdout!");
-    }
-    fn unlink(&self, _name: &str) -> isize {
-        panic!("Cannot unlink stdout!");
     }
 }
