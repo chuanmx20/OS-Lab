@@ -5,7 +5,7 @@ use crate::{
     task::{
         current_process, current_task, current_user_token, exit_current_and_run_next, pid2process,
         suspend_current_and_run_next, SignalFlags, TaskStatus,
-    },
+    }, timer::get_time_us,
 };
 use alloc::{string::String, sync::Arc, vec::Vec};
 
@@ -34,6 +34,15 @@ pub fn sys_exit(exit_code: i32) -> ! {
         "kernel:pid[{}] sys_exit",
         current_task().unwrap().process.upgrade().unwrap().getpid()
     );
+    // exit will dealloc all resources
+    let task = current_task().unwrap();
+    let task_inner = task.inner_exclusive_access();
+    let task_id = task_inner.res.as_ref().unwrap().tid;
+    let process = current_process();
+    let mut process_inner = process.inner_exclusive_access();
+    process_inner.dealloc_task_resource(task_id, 0, true);
+    drop(process_inner);
+    drop(process);
     exit_current_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
 }
@@ -167,7 +176,13 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
         "kernel:pid[{}] sys_get_time NOT IMPLEMENTED",
         current_task().unwrap().process.upgrade().unwrap().getpid()
     );
-    -1
+    let token = current_user_token();
+    let ts = translated_refmut(token, _ts);
+    let us = get_time_us();
+    *ts = TimeVal {
+        sec: us / 1000000,
+        usec: us % 1000000,
+    };
 }
 
 /// task_info syscall
