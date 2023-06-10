@@ -162,6 +162,26 @@ impl ProcessControlBlockInner {
     pub fn get_mutex_res_id(&self, mutex_id: usize) -> usize {
         *self.mutex_id2res_id.get(&mutex_id).unwrap()
     }
+    /// allocate a new resource index for semaphore
+    pub fn alloc_semaphore_res_id(&mut self, semaphore_id: usize) {
+        // allocate a new resource id to this semaphore
+        // before allocation, check if this semaphore has been allocated a resource id
+        assert!(self.semaphore_id2res_id.get(&semaphore_id).is_none());
+        // allocate a new resource id
+        let res_id = self.available_list.len();
+        self.semaphore_id2res_id.insert(semaphore_id, res_id);
+        self.available_list.push(1);
+        // as new resource is allocated, and no thread is accessing this resource
+        // we should add a new column meaning that no thread is accessing this resource
+        for i in 0..self.allocation_matrix.len() {
+            self.allocation_matrix[i].push(0);
+            self.need_matrix[i].push(0);
+        }
+    }
+    /// get resource index from semaphore id
+    pub fn get_semaphore_res_id(&self, sem_id: usize) -> usize {
+        *self.semaphore_id2res_id.get(&sem_id).unwrap()
+    }
 }
 
 impl ProcessControlBlock {

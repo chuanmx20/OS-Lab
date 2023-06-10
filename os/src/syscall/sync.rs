@@ -142,6 +142,8 @@ pub fn sys_semaphore_create(res_count: usize) -> isize {
             .push(Some(Arc::new(Semaphore::new(res_count))));
         process_inner.semaphore_list.len() - 1
     };
+    // allocate new resource for a new semaphore
+    process_inner.alloc_semaphore_res_id(id);
     id as isize
 }
 /// semaphore up syscall
@@ -165,7 +167,6 @@ pub fn sys_semaphore_up(sem_id: usize) -> isize {
     0
 }
 /// semaphore down syscall
-/// TODO: deadlock detection
 pub fn sys_semaphore_down(sem_id: usize) -> isize {
     trace!(
         "kernel:pid[{}] tid[{}] sys_semaphore_down",
@@ -179,7 +180,18 @@ pub fn sys_semaphore_down(sem_id: usize) -> isize {
             .tid
     );
     let process = current_process();
-    let process_inner = process.inner_exclusive_access();
+    let mut process_inner = process.inner_exclusive_access();
+    
+    // TODO: deadlock detection
+    let resource_id = process_inner.get_semaphore_res_id(sem_id);
+    let current_task = current_task().unwrap();
+    let current_task_inner = current_task.inner_exclusive_access();
+    let task_id = current_task_inner.res.as_ref().unwrap().tid;
+
+    process_inner.need(task_id, resource_id);
+    if process_inner.deadlock_detected() {
+        return -0xDEAD;
+    }
     let sem = Arc::clone(process_inner.semaphore_list[sem_id].as_ref().unwrap());
     drop(process_inner);
     sem.down();
