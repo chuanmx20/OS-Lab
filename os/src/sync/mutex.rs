@@ -11,7 +11,7 @@ pub trait Mutex: Sync + Send {
     /// Lock the mutex
     fn lock(&self, mutex_id: usize);
     /// Unlock the mutex
-    fn unlock(&self);
+    fn unlock(&self, mutex_id: usize);
 }
 
 /// Spinlock Mutex struct
@@ -56,7 +56,7 @@ impl Mutex for MutexSpin {
         }
     }
 
-    fn unlock(&self) {
+    fn unlock(&self, mutex_id: usize) {
         trace!("kernel: MutexSpin::unlock");
         let mut locked = self.locked.exclusive_access();
         let task = current_task().unwrap();
@@ -64,7 +64,7 @@ impl Mutex for MutexSpin {
         let task_id = task_inner.res.as_ref().unwrap().tid;
         let process = current_process();
         let mut process_inner = process.inner_exclusive_access();
-        let resource_id = process_inner.get_mutex_res_id(task_id);
+        let resource_id = process_inner.get_mutex_res_id(mutex_id);
         process_inner.dealloc_task_resource(task_id, resource_id, false);
         
         drop(task_inner);
@@ -109,15 +109,37 @@ impl Mutex for MutexBlocking {
             drop(mutex_inner);
             block_current_and_run_next();
         } else {
+            let process = current_process();
+            let mut process_inner = process.inner_exclusive_access();
+            let resource_id = process_inner.get_mutex_res_id(mutex_id);
+            
+            let task = current_task().unwrap();
+            let mut task_inner = task.inner_exclusive_access();
+            let task_id = task_inner.res.as_ref().unwrap().tid;
+            process_inner.alloc_task_resource(task_id, resource_id);
+            drop(task_inner);
+            drop(process_inner);
+            drop(process);
             mutex_inner.locked = true;
         }
     }
 
     /// unlock the blocking mutex
-    fn unlock(&self) {
+    fn unlock(&self, mutex_id: usize) {
         trace!("kernel: MutexBlocking::unlock");
         let mut mutex_inner = self.inner.exclusive_access();
         assert!(mutex_inner.locked);
+
+        let process = current_process();
+        let mut process_inner = process.inner_exclusive_access();
+        let resource_id = process_inner.get_mutex_res_id(mutex_id);
+        let task = current_task().unwrap();
+        let mut task_inner = task.inner_exclusive_access();
+        let task_id = task_inner.res.as_ref().unwrap().tid;
+        process_inner.dealloc_task_resource(task_id, resource_id, false);
+        drop(task_inner);
+        drop(process_inner);
+        drop(process);
         if let Some(waking_task) = mutex_inner.wait_queue.pop_front() {
             wakeup_task(waking_task);
         } else {
