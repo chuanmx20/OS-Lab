@@ -44,7 +44,7 @@ impl Mutex for MutexSpin {
                 let resource_id = process_inner.get_mutex_res_id(mutex_id);
 
                 let task = current_task().unwrap();
-                let mut task_inner = task.inner_exclusive_access();
+                let task_inner = task.inner_exclusive_access();
                 let task_id = task_inner.res.as_ref().unwrap().tid;
                 process_inner.alloc_task_resource(task_id, resource_id);
                 drop(task_inner);
@@ -60,7 +60,7 @@ impl Mutex for MutexSpin {
         trace!("kernel: MutexSpin::unlock");
         let mut locked = self.locked.exclusive_access();
         let task = current_task().unwrap();
-        let mut task_inner = task.inner_exclusive_access();
+        let task_inner = task.inner_exclusive_access();
         let task_id = task_inner.res.as_ref().unwrap().tid;
         let process = current_process();
         let mut process_inner = process.inner_exclusive_access();
@@ -114,7 +114,7 @@ impl Mutex for MutexBlocking {
             let resource_id = process_inner.get_mutex_res_id(mutex_id);
             
             let task = current_task().unwrap();
-            let mut task_inner = task.inner_exclusive_access();
+            let task_inner = task.inner_exclusive_access();
             let task_id = task_inner.res.as_ref().unwrap().tid;
             process_inner.alloc_task_resource(task_id, resource_id);
             drop(task_inner);
@@ -134,7 +134,7 @@ impl Mutex for MutexBlocking {
         let mut process_inner = process.inner_exclusive_access();
         let resource_id = process_inner.get_mutex_res_id(mutex_id);
         let task = current_task().unwrap();
-        let mut task_inner = task.inner_exclusive_access();
+        let task_inner = task.inner_exclusive_access();
         let task_id = task_inner.res.as_ref().unwrap().tid;
         process_inner.dealloc_task_resource(task_id, resource_id, false);
         drop(task_inner);

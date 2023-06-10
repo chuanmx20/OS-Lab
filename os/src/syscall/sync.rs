@@ -267,7 +267,7 @@ pub fn sys_condvar_wait(condvar_id: usize, mutex_id: usize) -> isize {
     let condvar = Arc::clone(process_inner.condvar_list[condvar_id].as_ref().unwrap());
     let mutex = Arc::clone(process_inner.mutex_list[mutex_id].as_ref().unwrap());
     drop(process_inner);
-    condvar.wait(mutex);
+    condvar.wait(mutex, mutex_id);
     0
 }
 /// enable deadlock detection syscall
