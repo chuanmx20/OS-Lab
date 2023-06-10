@@ -41,6 +41,7 @@ impl Semaphore {
         let task_inner = task.inner_exclusive_access();
         let task_id = task_inner.res.as_ref().unwrap().tid;
         process_inner.dealloc_task_resource(task_id, resource_id, false);
+        drop(task_inner);
         
         if inner.count <= 0 {
             if let Some(task) = inner.wait_queue.pop_front() {
@@ -68,11 +69,11 @@ impl Semaphore {
             let task = current_task().unwrap();
             let task_inner = task.inner_exclusive_access();
             let task_id = task_inner.res.as_ref().unwrap().tid;
+            drop(task_inner);
             let process = current_process();
             let mut process_inner = process.inner_exclusive_access();
             let resource_id = process_inner.get_semaphore_res_id(sem_id);  
             process_inner.alloc_task_resource(task_id, resource_id);
-            drop(task_inner);
             drop(process_inner);
             drop(process);
         }

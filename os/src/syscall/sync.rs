@@ -80,6 +80,7 @@ pub fn sys_mutex_lock(mutex_id: usize) -> isize {
     let current_task = current_task().unwrap();
     let current_task_inner = current_task.inner_exclusive_access();
     let task_id = current_task_inner.res.as_ref().unwrap().tid;
+    drop(current_task_inner);
 
     process_inner.need(task_id, resource_id);
     if process_inner.deadlock_detected() {
@@ -187,7 +188,7 @@ pub fn sys_semaphore_down(sem_id: usize) -> isize {
     let current_task = current_task().unwrap();
     let current_task_inner = current_task.inner_exclusive_access();
     let task_id = current_task_inner.res.as_ref().unwrap().tid;
-
+    drop(current_task_inner);
     process_inner.need(task_id, resource_id);
     if process_inner.deadlock_detected() {
         return -0xDEAD;
@@ -267,8 +268,7 @@ pub fn sys_condvar_wait(condvar_id: usize, mutex_id: usize) -> isize {
     let condvar = Arc::clone(process_inner.condvar_list[condvar_id].as_ref().unwrap());
     let mutex = Arc::clone(process_inner.mutex_list[mutex_id].as_ref().unwrap());
     drop(process_inner);
-    condvar.wait(mutex, mutex_id);
-    0
+    condvar.wait(mutex, mutex_id)
 }
 /// enable deadlock detection syscall
 ///
