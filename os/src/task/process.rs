@@ -182,6 +182,30 @@ impl ProcessControlBlockInner {
     pub fn get_semaphore_res_id(&self, sem_id: usize) -> usize {
         *self.semaphore_id2res_id.get(&sem_id).unwrap()
     }
+    /// allocate a new resource for a specific thread
+    pub fn alloc_task_resource(&mut self, thread_id:usize, resource_id: usize) {
+        assert!(self.need_matrix[thread_id][resource_id] <= self.available_list[resource_id]);
+        self.available_list[resource_id] -= self.need_matrix[thread_id][resource_id];
+        self.allocation_matrix[thread_id][resource_id] += self.need_matrix[thread_id][resource_id];
+        self.need_matrix[thread_id][resource_id] = 0;
+    }
+    /// deallocate a resource for a specific thread
+    pub fn dealloc_task_resource(&mut self, thread_id:usize, resource_id: usize, exit: bool) {
+        if exit {
+            for i in 0..self.available_list.len() {
+                self.available_list[i] += self.allocation_matrix[thread_id][i];
+                self.allocation_matrix[thread_id][i] = 0;
+                self.need_matrix[thread_id][i] = 0;
+            }
+        }
+        else {
+            self.available_list[resource_id] += 1;
+            if self.allocation_matrix[thread_id][resource_id] != 0 {
+                self.allocation_matrix[thread_id][resource_id] -= 1;
+            }
+            self.need_matrix[thread_id][resource_id] = 0;
+        }
+    }
 }
 
 impl ProcessControlBlock {

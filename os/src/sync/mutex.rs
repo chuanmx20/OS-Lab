@@ -1,7 +1,7 @@
 //! Mutex (spin-like and blocking(sleep))
 
 use super::UPSafeCell;
-use crate::task::TaskControlBlock;
+use crate::task::{TaskControlBlock, current_process};
 use crate::task::{block_current_and_run_next, suspend_current_and_run_next};
 use crate::task::{current_task, wakeup_task};
 use alloc::{collections::VecDeque, sync::Arc};
@@ -9,7 +9,7 @@ use alloc::{collections::VecDeque, sync::Arc};
 /// Mutex trait
 pub trait Mutex: Sync + Send {
     /// Lock the mutex
-    fn lock(&self);
+    fn lock(&self, mutex_id: usize);
     /// Unlock the mutex
     fn unlock(&self);
 }
@@ -30,7 +30,7 @@ impl MutexSpin {
 
 impl Mutex for MutexSpin {
     /// Lock the spinlock mutex
-    fn lock(&self) {
+    fn lock(&self, mutex_id: usize) {
         trace!("kernel: MutexSpin::lock");
         loop {
             let mut locked = self.locked.exclusive_access();
@@ -39,6 +39,17 @@ impl Mutex for MutexSpin {
                 suspend_current_and_run_next();
                 continue;
             } else {
+                let process = current_process();
+                let mut process_inner = process.inner_exclusive_access();
+                let resource_id = process_inner.get_mutex_res_id(mutex_id);
+
+                let task = current_task().unwrap();
+                let mut task_inner = task.inner_exclusive_access();
+                let task_id = task_inner.res.as_ref().unwrap().tid;
+                process_inner.alloc_task_resource(task_id, resource_id);
+                drop(task_inner);
+                drop(process_inner);
+                drop(process);
                 *locked = true;
                 return;
             }
@@ -48,6 +59,17 @@ impl Mutex for MutexSpin {
     fn unlock(&self) {
         trace!("kernel: MutexSpin::unlock");
         let mut locked = self.locked.exclusive_access();
+        let task = current_task().unwrap();
+        let mut task_inner = task.inner_exclusive_access();
+        let task_id = task_inner.res.as_ref().unwrap().tid;
+        let process = current_process();
+        let mut process_inner = process.inner_exclusive_access();
+        let resource_id = process_inner.get_mutex_res_id(task_id);
+        process_inner.dealloc_task_resource(task_id, resource_id, false);
+        
+        drop(task_inner);
+        drop(process_inner);
+        drop(process);
         *locked = false;
     }
 }
@@ -79,7 +101,7 @@ impl MutexBlocking {
 
 impl Mutex for MutexBlocking {
     /// lock the blocking mutex
-    fn lock(&self) {
+    fn lock(&self, mutex_id: usize) {
         trace!("kernel: MutexBlocking::lock");
         let mut mutex_inner = self.inner.exclusive_access();
         if mutex_inner.locked {
