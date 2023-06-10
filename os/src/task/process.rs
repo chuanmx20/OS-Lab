@@ -206,6 +206,17 @@ impl ProcessControlBlockInner {
             self.need_matrix[thread_id][resource_id] = 0;
         }
     }
+    /// add a new row for a new thread
+    pub fn init_task_resource(&mut self, thread_id:usize) {
+        // if this thread_id is new, we should add a new row for it
+        if self.allocation_matrix.len() <= thread_id {
+            self.allocation_matrix.push(vec![0; self.available_list.len()]);
+            self.need_matrix.push(vec![0; self.available_list.len()]);
+        } else {
+            self.allocation_matrix[thread_id] = vec![0; self.available_list.len()];
+            self.need_matrix[thread_id] = vec![0; self.available_list.len()];
+        }
+    }
 }
 
 impl ProcessControlBlock {
