@@ -54,7 +54,6 @@ pub fn sys_mutex_create(blocking: bool) -> isize {
         process_inner.mutex_list.push(mutex);
         process_inner.mutex_list.len() as isize - 1
     };
-    // TODO: allocate resource id
     process_inner.alloc_mutex_res_id(mutex_id as usize);
     mutex_id
 }
@@ -73,8 +72,20 @@ pub fn sys_mutex_lock(mutex_id: usize) -> isize {
     );
     // TODO: deadlock detection
     let process = current_process();
-    let process_inner = process.inner_exclusive_access();
+    let mut process_inner = process.inner_exclusive_access();
     let mutex = Arc::clone(process_inner.mutex_list[mutex_id].as_ref().unwrap());
+    // get resource index
+    let resource_id = process_inner.get_mutex_res_id(mutex_id);
+    // get task id
+    let current_task = current_task().unwrap();
+    let current_task_inner = current_task.inner_exclusive_access();
+    let task_id = current_task_inner.res.as_ref().unwrap().tid;
+
+    process_inner.need(task_id, resource_id);
+    if process_inner.deadlock_detected() {
+        return -0xDEAD;
+    }
+
     drop(process_inner);
     drop(process);
     mutex.lock();

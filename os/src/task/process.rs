@@ -97,6 +97,51 @@ impl ProcessControlBlockInner {
     pub fn get_task(&self, tid: usize) -> Arc<TaskControlBlock> {
         self.tasks[tid].as_ref().unwrap().clone()
     }
+    /// update need matrix
+    pub fn need(&mut self, thread_id:usize, res_id: usize) {
+        self.need_matrix[thread_id][res_id] += 1;
+    }
+    /// detect deadlock:
+    /// if deadlock detected, return true
+    /// else return false
+    pub fn deadlock_detected(&self) -> bool {
+        if self.deadlock_detect {
+            // TODO: detect deadlock
+            let mut finish = vec![false; self.thread_count()];
+            let mut work = self.available_list.clone();
+            let mut finish_flag = true;
+
+            while finish_flag {
+                finish_flag = false;
+                for i in 0..self.thread_count() {
+                    if !finish[i] {
+                        let mut flag = true;
+                        for j in 0..self.available_list.len() {
+                            if self.need_matrix[i][j] > work[j] {
+                                flag = false;
+                                break;
+                            }
+                        }
+                        if flag {
+                            finish_flag = true;
+                            finish[i] = true;
+                            for j in 0..self.available_list.len() {
+                                work[j] += self.allocation_matrix[i][j];
+                            }
+                        }
+                    }
+                }
+            }
+            for i in 0..self.thread_count() {
+                if !finish[i] {
+                    return true;
+                }
+            }
+            false
+        } else {
+            false
+        }
+    }
     /// allocate a new resource index for mutex
     pub fn alloc_mutex_res_id(&mut self, mutex_id: usize) {
         // allocate a new resource id to this mutex
@@ -112,6 +157,10 @@ impl ProcessControlBlockInner {
             self.allocation_matrix[i].push(0);
             self.need_matrix[i].push(0);
         }
+    }  
+    /// get resource index from mutex id
+    pub fn get_mutex_res_id(&self, mutex_id: usize) -> usize {
+        *self.mutex_id2res_id.get(&mutex_id).unwrap()
     }
 }
 
