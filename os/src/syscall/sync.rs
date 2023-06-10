@@ -163,7 +163,7 @@ pub fn sys_semaphore_up(sem_id: usize) -> isize {
     let process_inner = process.inner_exclusive_access();
     let sem = Arc::clone(process_inner.semaphore_list[sem_id].as_ref().unwrap());
     drop(process_inner);
-    sem.up();
+    sem.up(sem_id);
     0
 }
 /// semaphore down syscall
@@ -194,7 +194,7 @@ pub fn sys_semaphore_down(sem_id: usize) -> isize {
     }
     let sem = Arc::clone(process_inner.semaphore_list[sem_id].as_ref().unwrap());
     drop(process_inner);
-    sem.down();
+    sem.down(sem_id);
     0
 }
 /// condvar create syscall
