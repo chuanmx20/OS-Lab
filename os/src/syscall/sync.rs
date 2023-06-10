@@ -88,7 +88,7 @@ pub fn sys_mutex_lock(mutex_id: usize) -> isize {
 
     drop(process_inner);
     drop(process);
-    mutex.lock();
+    mutex.lock(mutex_id);
     0
 }
 /// mutex unlock syscall
@@ -109,7 +109,7 @@ pub fn sys_mutex_unlock(mutex_id: usize) -> isize {
     let mutex = Arc::clone(process_inner.mutex_list[mutex_id].as_ref().unwrap());
     drop(process_inner);
     drop(process);
-    mutex.unlock();
+    mutex.unlock(mutex_id);
     0
 }
 /// semaphore create syscall
