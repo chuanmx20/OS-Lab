@@ -73,6 +73,8 @@ impl Semaphore {
             let resource_id = process_inner.get_semaphore_res_id(sem_id);  
             process_inner.alloc_task_resource(task_id, resource_id);
             drop(task_inner);
+            drop(process_inner);
+            drop(process);
         }
     }
 }

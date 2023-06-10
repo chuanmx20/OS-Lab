@@ -183,6 +183,7 @@ pub fn sys_get_time(_ts: *mut TimeVal, _tz: usize) -> isize {
         sec: us / 1000000,
         usec: us % 1000000,
     };
+    0
 }
 
 /// task_info syscall

@@ -272,6 +272,7 @@ impl ProcessControlBlock {
         ));
         // prepare trap_cx of main thread
         let task_inner = task.inner_exclusive_access();
+        let task_id = task_inner.res.as_ref().unwrap().tid;
         let trap_cx = task_inner.get_trap_cx();
         let ustack_top = task_inner.res.as_ref().unwrap().ustack_top();
         let kstack_top = task.kstack.get_top();
@@ -287,7 +288,6 @@ impl ProcessControlBlock {
         let mut process_inner = process.inner_exclusive_access();
         process_inner.tasks.push(Some(Arc::clone(&task)));
         // now row for main thread
-        let task_id = task_inner.res.as_ref().unwrap().tid;
         process_inner.init_task_resource(task_id);
         drop(process_inner);
         insert_into_pid2process(process.getpid(), Arc::clone(&process));
