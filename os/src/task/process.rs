@@ -9,6 +9,7 @@ use crate::fs::{File, Stdin, Stdout};
 use crate::mm::{translated_refmut, MemorySet, KERNEL_SPACE};
 use crate::sync::{Condvar, Mutex, Semaphore, UPSafeCell};
 use crate::trap::{trap_handler, TrapContext};
+use alloc::collections::BTreeMap;
 use alloc::string::String;
 use alloc::sync::{Arc, Weak};
 use alloc::vec;
@@ -49,6 +50,20 @@ pub struct ProcessControlBlockInner {
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     /// condvar list
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+
+    /// Below are implemented for ch8
+    /// deadlock detect
+    pub deadlock_detect: bool,
+    /// available list
+    pub available_list: Vec<usize>,
+    /// allocation matrix
+    pub allocation_matrix: Vec<Vec<usize>>,
+    /// need matrix
+    pub need_matrix: Vec<Vec<usize>>,
+    /// map for mutex_id to resource_id
+    pub mutex_id2res_id: BTreeMap<usize, usize>,
+    /// map for semaphore_id to resource_id
+    pub semaphore_id2res_id: BTreeMap<usize, usize>,
 }
 
 impl ProcessControlBlockInner {
@@ -81,6 +96,22 @@ impl ProcessControlBlockInner {
     /// get a task with tid in this process
     pub fn get_task(&self, tid: usize) -> Arc<TaskControlBlock> {
         self.tasks[tid].as_ref().unwrap().clone()
+    }
+    /// allocate a new resource index for mutex
+    pub fn alloc_mutex_res_id(&mut self, mutex_id: usize) {
+        // allocate a new resource id to this mutex
+        // before allocation, check if this mutex has been allocated a resource id
+        assert!(self.mutex_id2res_id.get(&mutex_id).is_none());
+        // allocate a new resource id
+        let res_id = self.available_list.len();
+        self.mutex_id2res_id.insert(mutex_id, res_id);
+        self.available_list.push(1);
+        // as new resource is allocated, and no thread is accessing this resource
+        // we should add a new column meaning that no thread is accessing this resource
+        for i in 0..self.allocation_matrix.len() {
+            self.allocation_matrix[i].push(0);
+            self.need_matrix[i].push(0);
+        }
     }
 }
 
@@ -119,6 +150,13 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+
+                    deadlock_detect: false,
+                    available_list: Vec::new(),
+                    allocation_matrix: Vec::new(),
+                    need_matrix: Vec::new(),
+                    mutex_id2res_id: BTreeMap::new(),
+                    semaphore_id2res_id: BTreeMap::new(),
                 })
             },
         });
@@ -245,6 +283,13 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+
+                    deadlock_detect: false,
+                    available_list: Vec::new(),
+                    allocation_matrix: Vec::new(),
+                    need_matrix: Vec::new(),
+                    mutex_id2res_id: BTreeMap::new(),
+                    semaphore_id2res_id: BTreeMap::new(),
                 })
             },
         });
