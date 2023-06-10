@@ -286,6 +286,9 @@ impl ProcessControlBlock {
         // add main thread to the process
         let mut process_inner = process.inner_exclusive_access();
         process_inner.tasks.push(Some(Arc::clone(&task)));
+        // now row for main thread
+        let task_id = task_inner.res.as_ref().unwrap().tid;
+        process_inner.init_task_resource(task_id);
         drop(process_inner);
         insert_into_pid2process(process.getpid(), Arc::clone(&process));
         // add main thread to scheduler
