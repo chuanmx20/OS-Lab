@@ -1,7 +1,4 @@
 //! Semaphore
-
-use std::process;
-
 use crate::sync::UPSafeCell;
 use crate::task::{block_current_and_run_next, current_task, wakeup_task, TaskControlBlock, current_process};
 use alloc::{collections::VecDeque, sync::Arc};
