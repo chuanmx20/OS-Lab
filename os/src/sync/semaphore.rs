@@ -40,13 +40,14 @@ impl Semaphore {
         let task = current_task().unwrap();
         let task_inner = task.inner_exclusive_access();
         let task_id = task_inner.res.as_ref().unwrap().tid;
-        process_inner.dealloc_task_resource(task_id, resource_id, false);
+        process_inner.dealloc_task_resource(task_id, resource_id);
         drop(task_inner);
         
         if inner.count <= 0 {
             if let Some(task) = inner.wait_queue.pop_front() {
                 let task_inner = task.inner_exclusive_access();
                 let task_id = task_inner.res.as_ref().unwrap().tid;
+                // to run the task, we need to allocate the resource for it
                 process_inner.alloc_task_resource(task_id, resource_id);
                 drop(task_inner);
                 drop(process_inner);

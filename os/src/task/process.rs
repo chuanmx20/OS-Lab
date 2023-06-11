@@ -184,26 +184,27 @@ impl ProcessControlBlockInner {
     }
     /// allocate a new resource for a specific thread
     pub fn alloc_task_resource(&mut self, thread_id:usize, resource_id: usize) {
+        // only allocate resource when resource is available for this thread's need
         assert!(self.need_matrix[thread_id][resource_id] <= self.available_list[resource_id]);
         self.available_list[resource_id] -= self.need_matrix[thread_id][resource_id];
         self.allocation_matrix[thread_id][resource_id] += self.need_matrix[thread_id][resource_id];
+        // need is met, set to 0
         self.need_matrix[thread_id][resource_id] = 0;
     }
     /// deallocate a resource for a specific thread
-    pub fn dealloc_task_resource(&mut self, thread_id:usize, resource_id: usize, exit: bool) {
-        if exit {
-            for i in 0..self.available_list.len() {
-                self.available_list[i] += self.allocation_matrix[thread_id][i];
-                self.allocation_matrix[thread_id][i] = 0;
-                self.need_matrix[thread_id][i] = 0;
-            }
+    pub fn dealloc_task_resource(&mut self, thread_id:usize, resource_id: usize) {
+        self.available_list[resource_id] += 1;
+        if self.allocation_matrix[thread_id][resource_id] != 0 {
+            self.allocation_matrix[thread_id][resource_id] -= 1;
         }
-        else {
-            self.available_list[resource_id] += 1;
-            if self.allocation_matrix[thread_id][resource_id] != 0 {
-                self.allocation_matrix[thread_id][resource_id] -= 1;
-            }
-            self.need_matrix[thread_id][resource_id] = 0;
+        self.need_matrix[thread_id][resource_id] = 0;
+    }
+    /// dealloc a exited thread's resource
+    pub fn dealloc_exited_task(&mut self, thread_id:usize) {
+        for i in 0..self.available_list.len() {
+            self.available_list[i] += self.allocation_matrix[thread_id][i];
+            self.allocation_matrix[thread_id][i] = 0;
+            self.need_matrix[thread_id][i] = 0;
         }
     }
     /// add a new row for a new thread

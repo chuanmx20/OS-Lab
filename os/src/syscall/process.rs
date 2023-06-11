@@ -41,7 +41,7 @@ pub fn sys_exit(exit_code: i32) -> ! {
     drop(task_inner);
     let process = current_process();
     let mut process_inner = process.inner_exclusive_access();
-    process_inner.dealloc_task_resource(task_id, 0, true);
+    process_inner.dealloc_exited_task(task_id);
     drop(process_inner);
     drop(process);
     exit_current_and_run_next(exit_code);

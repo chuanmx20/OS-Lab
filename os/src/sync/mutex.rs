@@ -65,7 +65,7 @@ impl Mutex for MutexSpin {
         let process = current_process();
         let mut process_inner = process.inner_exclusive_access();
         let resource_id = process_inner.get_mutex_res_id(mutex_id);
-        process_inner.dealloc_task_resource(task_id, resource_id, false);
+        process_inner.dealloc_task_resource(task_id, resource_id);
         
         drop(task_inner);
         drop(process_inner);
@@ -136,7 +136,7 @@ impl Mutex for MutexBlocking {
         let task = current_task().unwrap();
         let task_inner = task.inner_exclusive_access();
         let task_id = task_inner.res.as_ref().unwrap().tid;
-        process_inner.dealloc_task_resource(task_id, resource_id, false);
+        process_inner.dealloc_task_resource(task_id, resource_id);
         drop(task_inner);
         drop(process_inner);
         drop(process);
