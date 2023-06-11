@@ -144,7 +144,7 @@ pub fn sys_semaphore_create(res_count: usize) -> isize {
         process_inner.semaphore_list.len() - 1
     };
     // allocate new resource for a new semaphore
-    process_inner.alloc_semaphore_res_id(id);
+    process_inner.alloc_semaphore_res_id(id, res_count);
     id as isize
 }
 /// semaphore up syscall

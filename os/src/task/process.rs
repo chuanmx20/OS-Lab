@@ -163,14 +163,14 @@ impl ProcessControlBlockInner {
         *self.mutex_id2res_id.get(&mutex_id).unwrap()
     }
     /// allocate a new resource index for semaphore
-    pub fn alloc_semaphore_res_id(&mut self, semaphore_id: usize) {
+    pub fn alloc_semaphore_res_id(&mut self, semaphore_id: usize, resource_count: usize) {
         // allocate a new resource id to this semaphore
         // before allocation, check if this semaphore has been allocated a resource id
         assert!(self.semaphore_id2res_id.get(&semaphore_id).is_none());
         // allocate a new resource id
         let res_id = self.available_list.len();
         self.semaphore_id2res_id.insert(semaphore_id, res_id);
-        self.available_list.push(1);
+        self.available_list.push(resource_count);
         // as new resource is allocated, and no thread is accessing this resource
         // we should add a new column meaning that no thread is accessing this resource
         for i in 0..self.allocation_matrix.len() {
@@ -209,7 +209,7 @@ impl ProcessControlBlockInner {
     /// add a new row for a new thread
     pub fn init_task_resource(&mut self, thread_id:usize) {
         // if this thread_id is new, we should add a new row for it
-        println!("init_task_resource: thread_id = {}, allocation_matrix.len() = {}", thread_id, self.allocation_matrix.len());
+        // println!("init_task_resource: thread_id = {}, allocation_matrix.len() = {}", thread_id, self.allocation_matrix.len());
         if self.allocation_matrix.len() <= thread_id {
             self.allocation_matrix.push(vec![0; self.available_list.len()]);
             self.need_matrix.push(vec![0; self.available_list.len()]);
