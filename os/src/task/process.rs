@@ -209,9 +209,11 @@ impl ProcessControlBlockInner {
     /// add a new row for a new thread
     pub fn init_task_resource(&mut self, thread_id:usize) {
         // if this thread_id is new, we should add a new row for it
+        println!("init_task_resource: thread_id = {}, allocation_matrix.len() = {}", thread_id, self.allocation_matrix.len());
         if self.allocation_matrix.len() <= thread_id {
             self.allocation_matrix.push(vec![0; self.available_list.len()]);
             self.need_matrix.push(vec![0; self.available_list.len()]);
+            println!("init_task_resource: thread_id = {}, need_matrix.len() = {}", thread_id, self.need_matrix.len());
         } else {
             self.allocation_matrix[thread_id] = vec![0; self.available_list.len()];
             self.need_matrix[thread_id] = vec![0; self.available_list.len()];
@@ -392,11 +394,11 @@ impl ProcessControlBlock {
                     condvar_list: Vec::new(),
 
                     deadlock_detect: false,
-                    available_list: Vec::new(),
-                    allocation_matrix: Vec::new(),
-                    need_matrix: Vec::new(),
-                    mutex_id2res_id: BTreeMap::new(),
-                    semaphore_id2res_id: BTreeMap::new(),
+                    available_list: parent.available_list.clone(),
+                    allocation_matrix: parent.allocation_matrix.clone(),
+                    need_matrix: parent.need_matrix.clone(),
+                    mutex_id2res_id: parent.mutex_id2res_id.clone(),
+                    semaphore_id2res_id: parent.semaphore_id2res_id.clone(),
                 })
             },
         });

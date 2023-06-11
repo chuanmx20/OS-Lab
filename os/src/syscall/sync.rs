@@ -81,7 +81,7 @@ pub fn sys_mutex_lock(mutex_id: usize) -> isize {
     let current_task_inner = current_task.inner_exclusive_access();
     let task_id = current_task_inner.res.as_ref().unwrap().tid;
     drop(current_task_inner);
-
+    println!("Need matrix:{}", process_inner.need_matrix.len());
     process_inner.need(task_id, resource_id);
     if process_inner.deadlock_detected() {
         return -0xDEAD;
