@@ -1,6 +1,8 @@
 # rCore-Tutorial-Code-2023S
-
-### Code
+> This is rCore lab of THU OS 2023 spring cource
+> Solutions for each chapter lies in the relative branch
+> The answer to post-lab quizzes can be found in the "reposts/" directory of certain branch
+### Code 
 - [Soure Code of labs for 2023S](https://github.com/LearningOS/rCore-Tutorial-Code-2023S)
 ### Documents
 
